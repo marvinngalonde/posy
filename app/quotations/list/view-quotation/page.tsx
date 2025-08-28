@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useEffect, useState } from "react"
 import { useGetQuotationItemsQuery, useGetQuotationByIdQuery } from '@/lib/slices/quotationsApi'
+import type React from "react"
 
 interface QuotationListItem {
   id: string

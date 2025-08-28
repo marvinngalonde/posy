@@ -15,7 +15,7 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install --legacy-peer-deps --production=false
 
-      - name: 🏗️ Build Next.js
+      - name: Build Next.js
         run: npm run build
 
       - name: 📂 Deploy to FTP
