@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getConnection } from "@/lib/mysql"
 import { v4 as uuidv4 } from "uuid"
-import { Sale } from "@/lib/types/api"
+import { Sale, SaleItem } from "@/lib/types/sales"
 import type { FieldPacket} from "mysql2"
 
 // CREATE (POST)
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const conn = getConnection()
+  const pool = getConnection()
+  let conn: any
   try {
+    conn = await pool.getConnection()
     const saleId = uuidv4()
     const reference = body.reference || `SL-${Date.now()}`
     await conn.execute(
@@ -21,18 +23,18 @@ export async function POST(req: NextRequest) {
         body.customer_id || null,
         body.warehouse_id || null,
         body.date,
-        body.subtotal || 0,
-        body.tax_rate || 0,
-        body.tax_amount || 0,
-        body.discount || 0,
-        body.shipping || 0,
+        body.subtotal ?? 0,
+        body.tax_rate ?? 0,
+        body.tax_amount ?? 0,
+        body.discount ?? 0,
+        body.shipping ?? 0,
         body.total,
-        body.paid || 0,
-        body.due || 0,
+        body.paid ?? 0,
+        body.due ?? 0,
         body.status || "completed",
         body.payment_status || "paid",
-        body.notes || null,
-        body.created_by || null,
+        body.notes ?? null,
+        body.created_by ?? null,
       ]
     )
     // Insert sale items
@@ -51,11 +53,11 @@ export async function POST(req: NextRequest) {
             uuidv4(),
             saleId,
             item.product_id,
-            item.quantity || 0,
-            item.price || 0,
-            item.discount || 0,
-            item.tax || 0,
-            ((item.price || 0) * (item.quantity || 0)) - (item.discount || 0) + (item.tax || 0)
+            item.quantity ?? 0,
+            item.unit_price ?? 0,
+            item.discount ?? 0,
+            item.tax ?? 0,
+            ((item.unit_price ?? 0) * (item.quantity ?? 0)) - (item.discount ?? 0) + (item.tax ?? 0)
           ]
         )
       }
@@ -67,6 +69,8 @@ export async function POST(req: NextRequest) {
     
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: message }, { status: 500 })
+  } finally {
+    if (conn) conn.release()
   }
 }
 
@@ -77,10 +81,11 @@ export async function GET_ONE(req: NextRequest) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
-  const pool = getConnection()
-  let conn
+  const pool = getConnection() // Assuming getConnection returns a Promise<Pool>
+  let conn: any // Explicitly type conn to allow null/undefined before assignment
   try {
     conn = await pool.getConnection()
+    // Ensure the Sale type is compatible with the database result structure
     const [sales]: [Sale[], FieldPacket[]] = await conn.query<Sale[]>(
         `SELECT 
         s.*, 
@@ -107,8 +112,8 @@ export async function GET_ONE(req: NextRequest) {
 
 // READ ALL (GET)
 export async function GET(req: NextRequest) {
-  const pool = getConnection()
-  let conn
+  const pool = getConnection() // Assuming getConnection returns a Promise<Pool>
+  let conn: any // Explicitly type conn to allow null/undefined before assignment
   try {
     conn = await pool.getConnection()
     const { searchParams } = new URL(req.url)
@@ -118,6 +123,7 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit
 
     const searchQuery = `WHERE s.reference LIKE ? OR c.name LIKE ?`
+    // Ensure the Sale type is compatible with the database result structure
     const [sales]: [Sale[], FieldPacket[]] = await conn.query<Sale[]>(
       `SELECT 
         s.*, 
@@ -161,7 +167,7 @@ export async function PUT(req: NextRequest) {
   const body = await req.json()
   if (!body.id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
   const pool = getConnection()
-  let conn
+  let conn: any
   try {
     conn = await pool.getConnection()
     await conn.execute(
@@ -170,20 +176,20 @@ export async function PUT(req: NextRequest) {
        WHERE id=?`,
       [
         body.reference,
-        body.customer_id,
-        body.warehouse_id,
+        body.customer_id ?? null,
+        body.warehouse_id ?? null,
         body.date,
-        body.subtotal,
-        body.tax_rate,
-        body.tax_amount,
-        body.discount,
-        body.shipping,
+        body.subtotal ?? 0,
+        body.tax_rate ?? 0,
+        body.tax_amount ?? 0,
+        body.discount ?? 0,
+        body.shipping ?? 0,
         body.total,
-        body.paid,
-        body.due,
+        body.paid ?? 0,
+        body.due ?? 0,
         body.status,
         body.payment_status,
-        body.notes,
+        body.notes ?? null,
         body.id
       ]
     )
@@ -205,7 +211,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
   
   const pool = getConnection()
-  let conn
+  let conn: any
   try {
     conn = await pool.getConnection()
     // Check if sale exists first

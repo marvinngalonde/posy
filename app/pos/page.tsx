@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Search, X,  Minus, Plus, RotateCcw, CreditCard, Maximize2, Minimize2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,8 @@ import { logout } from "@/lib/slices/authSlice"
 import { useGetCategoriesQuery, useGetBrandsQuery, useGetWarehousesQuery } from "@/lib/slices/settingsApi"
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
+import { useCreateSaleMutation } from "@/lib/slices/salesApi" // Import useCreateSaleMutation
+import { toast } from "sonner" // Import toast for notifications
 
 
 interface CartItem {
@@ -46,8 +48,6 @@ interface Category {
 export default function POSSystem() {
   // State
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedBrand, setSelectedBrand] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -63,13 +63,8 @@ export default function POSSystem() {
   const [showReceiptModal, setShowReceiptModal] = useState(false)
 
   // Customers, Warehouses, Brands state
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([
-    { id: "walkin", name: "Walk-In-Customer" }
-  ])
   const [selectedCustomer, setSelectedCustomer] = useState("walkin")
-  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([])
   const [selectedWarehouse, setSelectedWarehouse] = useState("")
-  const [brands, setBrands] = useState<{ id: string; name: string }[]>([])
 
   // Payment form states
   const [receivedAmount, setReceivedAmount] = useState("")
@@ -106,48 +101,45 @@ export default function POSSystem() {
   const { data: categoriesData, isLoading: categoriesLoading } = useGetCategoriesQuery()
   const { data: brandsData, isLoading: brandsLoading } = useGetBrandsQuery()
   const { data: warehousesData, isLoading: warehousesLoading } = useGetWarehousesQuery()
-  const { data: customersData, isLoading: customersLoading } = useGetCustomersQuery()
+  const { data: customersResponse, isLoading: customersLoading } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
   const { data: productsResponse, isLoading: productsLoading } = useGetProductsQuery({ page: 1, limit: 1000 })
   const productsData = productsResponse?.data || []
 
-  // Set data when loaded
-  useEffect(() => {
-    if (categoriesData) {
-      setCategories([{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData])
-    }
-  }, [categoriesData])
+  // RTK Query Mutations
+  const [createSale, { isLoading: isCreatingSale }] = useCreateSaleMutation()
 
-  useEffect(() => {
-    if (customersData) {
-      setCustomers([{ id: "walkin", name: "Walk-In-Customer" }, ...customersData])
-    }
-  }, [customersData])
+  const allCategories = useMemo(() => {
+    return categoriesData ? [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData] : [];
+  }, [categoriesData]);
 
-  useEffect(() => {
-    if (warehousesData) {
-      setWarehouses(warehousesData)
-      if (warehousesData.length > 0) setSelectedWarehouse(warehousesData[0].id)
-    }
-  }, [warehousesData])
+  const allBrands = useMemo(() => {
+    return brandsData || [];
+  }, [brandsData]);
 
-  useEffect(() => {
-    if (brandsData) {
-      setBrands(brandsData)
-    }
-  }, [brandsData])
+  const allWarehouses = useMemo(() => {
+    return warehousesData || [];
+  }, [warehousesData]);
 
+  const allCustomers = useMemo(() => {
+    return customersResponse?.data ? [{ id: "walkin", name: "Walk-In-Customer" }, ...customersResponse.data] : [{ id: "walkin", name: "Walk-In-Customer" }];
+  }, [customersResponse]);
+
+  // Initialize selectedWarehouse if not already set
   useEffect(() => {
-    if (productsData) {
-      setProducts(productsData)
+    if (allWarehouses.length > 0 && !selectedWarehouse) {
+      setSelectedWarehouse(allWarehouses[0].id);
     }
-  }, [productsData])
+  }, [allWarehouses, selectedWarehouse]);
 
   // Filter by category and brand
-  const filteredProducts = products.filter((product) => {
-    const categoryMatch = selectedCategory === "all" || product.category_id === selectedCategory
-    const brandMatch = selectedBrand === "all" || product.brand_id === selectedBrand
-    return categoryMatch && brandMatch
-  })
+  const filteredProducts = useMemo(() => {
+    const products = productsResponse?.data ?? []; // Ensure products is always an array
+    return products.filter(product => {
+      const categoryMatch = selectedCategory === "all" || product.category_id === selectedCategory;
+      const brandMatch = selectedBrand === "all" || product.brand_id === selectedBrand;
+      return categoryMatch && brandMatch;
+    });
+  }, [productsResponse, selectedCategory, selectedBrand]);
 
   // Cart logic
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
@@ -194,52 +186,50 @@ export default function POSSystem() {
   const handleSubmitPayment = async () => {
     setShowPaymentModal(false)
     // Prepare sale data
-    const saleData = {
-      reference: `SL-${Date.now()}`,
-      customer_id: selectedCustomer !== "walkin" ? selectedCustomer : null,
-      warehouse_id: selectedWarehouse || null,
-      date: new Date().toISOString().slice(0, 10),
-      subtotal,
-      tax_rate: 0, // If you have a tax rate field, set it here
-      tax_amount: tax,
-      discount,
-      shipping,
-      total: grandTotal,
-      paid: Number(payingAmount),
-      due: Math.max(0, grandTotal - Number(payingAmount)),
-      status: "completed",
-      payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
-      notes: paymentNote,
-      created_by: null, // Set user id if available
-      items: cartItems.map(item => ({
-        product_id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-      })),
-      payment: {
-        paymentChoice,
-        paymentNote,
-      },
-    }
-
+    const userId = typeof window !== "undefined" ? localStorage.getItem('UserId') : null;
+    
     try {
-      const res = await fetch("/api/pos/sales", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(saleData),
-      })
-      if (res.ok) {
-        setShowReceiptModal(true)
-        // Optionally clear cart, etc.
-      } else {
-        alert("Failed to save sale")
-      }
-    } catch (err) {
-      console.log(err)
-      alert("Failed to save sale")
+      const saleData = {
+        reference: `SL-${Date.now()}`,
+        customer_id: selectedCustomer !== "walkin" ? selectedCustomer : null,
+        warehouse_id: selectedWarehouse || null,
+        date: new Date().toISOString().slice(0, 10),
+        subtotal: Number(subtotal.toFixed(2)),
+        tax_rate: 0, // Assuming tax_rate is 0 if not explicitly set elsewhere
+        tax_amount: Number(tax.toFixed(2)),
+        discount: Number(discount.toFixed(2)),
+        shipping: Number(shipping.toFixed(2)),
+        total: Number(grandTotal.toFixed(2)),
+        paid: Number(Number(payingAmount).toFixed(2)),
+        due: Number(Math.max(0, grandTotal - Number(payingAmount)).toFixed(2)),
+        status: "completed", // Or appropriate status
+        payment_status: Number(payingAmount) >= grandTotal ? "paid" : (Number(payingAmount) > 0 ? "partial" : "unpaid"),
+        notes: paymentNote || null,
+        created_by: userId,
+        items: cartItems.map(item => ({
+          product_id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.price,
+          discount: 0, // Assuming discount per item is 0 if not captured
+          tax: 0, // Assuming tax per item is 0 if not captured
+          subtotal: Number((item.price * item.quantity).toFixed(2)),
+        })),
+        payment: {
+          payment_choice: paymentChoice,
+          payment_note: paymentNote,
+        },
+      };
+      
+      await createSale(saleData).unwrap();
+      toast.success("Sale created successfully!");
+      setShowReceiptModal(true);
+      setCartItems([]); // Clear cart after successful sale
+    } catch (err: any) {
+      console.error("Failed to create sale:", err);
+      toast.error(err.data?.message || "Failed to create sale");
     }
-  }
+  };
 
   const handlePrintReceipt = () => {
     const receiptWindow = window.open("", "_blank")
@@ -395,7 +385,7 @@ export default function POSSystem() {
                 <SelectValue placeholder={customersLoading ? "Loading customers..." : "Select customer"} />
               </SelectTrigger>
               <SelectContent>
-                {customers.map((customer) => (
+                {allCustomers.map((customer) => (
                   <SelectItem key={customer.id} value={customer.id}>
                     {customer.name}
                   </SelectItem>
@@ -410,7 +400,7 @@ export default function POSSystem() {
                 <SelectValue placeholder={warehousesLoading ? "Loading warehouses..." : "Select warehouse"} />
               </SelectTrigger>
               <SelectContent>
-                {warehouses.map((warehouse) => (
+                {allWarehouses.map((warehouse) => (
                   <SelectItem key={warehouse.id} value={warehouse.id}>
                     {warehouse.name}
                   </SelectItem>
@@ -595,7 +585,7 @@ export default function POSSystem() {
               <div className="col-span-5 text-center py-8 text-gray-500">
                 No products found
               </div>
-            ) : (
+            ) : (Array.isArray(filteredProducts) && filteredProducts.length > 0) ? (
               filteredProducts.map((product) => (
                 <Card
                   key={product.id}
@@ -621,7 +611,7 @@ export default function POSSystem() {
                   </CardContent>
                 </Card>
               ))
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -634,7 +624,7 @@ export default function POSSystem() {
             <DialogTitle>List of Category</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 p-4">
-            {categories.map((category) => (
+            {allCategories.map((category: Category) => (
               <Card
                 key={category.id}
                 className={`cursor-pointer transition-all ${selectedCategory === category.id ? "ring-2 ring-purple-500" : ""
@@ -677,10 +667,10 @@ export default function POSSystem() {
                 <p className="text-sm font-medium">All Brands</p>
               </CardContent>
             </Card>
-            {brands.length === 0 ? (
+            {allBrands.length === 0 ? (
               <div className="text-center text-gray-500 py-8">No brands available</div>
             ) : (
-              brands.map((brand) => (
+              allBrands.map((brand) => (
                 <Card
                   key={brand.id}
                   className={`cursor-pointer transition-all ${selectedBrand === brand.id ? "ring-2 ring-purple-500" : ""}`}
@@ -794,7 +784,7 @@ export default function POSSystem() {
             </div>
 
             <div className="border-t pt-4">
-              {cartItems.map((item) => (
+              {cartItems.map((item: CartItem) => (
                 <div key={item.id} className="space-y-2">
                   <p className="font-medium">{item.name}</p>
                   <div className="flex justify-between">

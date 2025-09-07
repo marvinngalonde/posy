@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { Sale, PaginatedSalesResponse } from '@/lib/types/api';
+import type { Sale, PaginatedSalesResponse } from '@/lib/types/sales';
 
 export const salesApi = createApi({
   reducerPath: 'salesApi',
@@ -20,15 +20,36 @@ export const salesApi = createApi({
       query: (id) => `/${id}`,
       providesTags: (result, error, id) => [{ type: 'Sale', id }],
     }),
-    createSale: builder.mutation<{ success: boolean; saleId: string; reference: string }, any>({
-      query: (saleData) => ({
-        url: '',
-        method: 'POST',
-        body: saleData,
-      }),
-      invalidatesTags: [{ type: 'Sale', id: 'LIST' }],
-    }),
-    updateSale: builder.mutation<{ success: boolean }, { id: string; data: any }>({
+    createSale: builder.mutation<Sale, {
+      reference: string;
+      customer_id: string | null;
+      warehouse_id: string | null;
+      date: string;
+      subtotal: number;
+      tax_rate: number;
+      tax_amount: number;
+      discount: number;
+      shipping: number;
+      total: number;
+      paid: number;
+      due: number;
+      status: string;
+      payment_status: string;
+      notes: string | null;
+      created_by: string | null;
+      items: SaleItem[];
+      payment: { payment_choice: string; payment_note: string | null };
+    }>(
+      {
+        query: (newSale) => ({
+          url: '',
+          method: 'POST',
+          body: newSale,
+        }),
+        invalidatesTags: [{ type: 'Sale', id: 'LIST' }],
+      },
+    ),
+    updateSale: builder.mutation<Sale, { id: string; data: Partial<Sale> }>({
       query: ({ id, data }) => ({
         url: `/${id}`,
         method: 'PUT',

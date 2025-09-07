@@ -25,4 +25,4 @@ jobs:
           username: bms@bms.verdsoft.co.zw
           password: ${{ secrets.ftp_password }}
           local-dir: ./
-          server-dir: /home/verdsoft/bms.verdsoft.co.zw/
+          server-dir: /

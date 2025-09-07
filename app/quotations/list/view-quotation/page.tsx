@@ -135,13 +135,13 @@ export function ViewQuotationDialog({ quotation, open, onOpenChange }: ViewQuota
                     items.map((it: any, idx: number) => (
                       <tr key={it.id} className="border-b">
                         <td className="p-3">{idx + 1}</td>
-                        <td className="p-3">{it.product_name ?? it.name}</td>
-                        <td className="p-3">{it.product_code ?? it.code}</td>
-                        <td className="p-3">{it.quantity}</td>
-                        <td className="p-3">${Number(it.price ?? it.unit_price ?? it.unitPrice ?? 0).toFixed(2)}</td>
+                        <td className="p-3">{it.product_name || it.name || 'N/A'}</td>
+                        <td className="p-3">{it.product_code || it.code || 'N/A'}</td>
+                        <td className="p-3">{it.quantity || 0}</td>
+                        <td className="p-3">${Number(it.price ?? it.unit_price ?? 0).toFixed(2)}</td>
                         <td className="p-3">${Number(it.discount || 0).toFixed(2)}</td>
                         <td className="p-3">${Number(it.tax || 0).toFixed(2)}</td>
-                        <td className="p-3">${Number(it.subtotal ?? ((Number(it.price ?? it.unit_price ?? it.unitPrice ?? 0) * Number(it.quantity || 0)) - Number(it.discount || 0) + Number(it.tax || 0))).toFixed(2)}</td>
+                        <td className="p-3">${Number(it.subtotal ?? ((Number(it.price ?? it.unit_price ?? 0) * Number(it.quantity || 0)) - Number(it.discount || 0) + Number(it.tax || 0))).toFixed(2)}</td>
                       </tr>
                     ))
                   )}
