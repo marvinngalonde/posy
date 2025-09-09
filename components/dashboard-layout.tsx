@@ -89,6 +89,16 @@ const menuItems = [
     ],
   },
   {
+    id: "invoices",
+    label: "Invoices",
+    icon: FileText,
+    roles: ['admin'], // Assuming only admin can manage invoices initially
+    submenu: [
+      { label: "Create Invoice", href: "/invoice/create" },
+      { label: "Invoice List", href: "/invoice/list" },
+    ],
+  },
+  {
     id: "pos",
     label: "POS",
     icon: ShoppingCart,

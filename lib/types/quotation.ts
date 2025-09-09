@@ -1,8 +1,8 @@
 export interface Quotation {
   id: string;
   reference: string;
-  customer_id?: string;
-  warehouse_id?: string;
+  customer_id: string | null; // Changed to string | null
+  warehouse_id: string | null; // Changed to string | null
   date: Date;
   valid_until?: Date;
   subtotal: number;
@@ -24,6 +24,8 @@ export interface QuotationItem {
   product_id: string;
   name: string;
   code: string;
+  product_name?: string; // Add product_name
+  product_code?: string; // Add product_code
   price: number;
   quantity: number;
   discount: number;

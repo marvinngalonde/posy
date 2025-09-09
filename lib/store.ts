@@ -25,6 +25,7 @@ import { hrmApi } from "./slices/hrmApi"
 import { transfersApi } from "./slices/transfersApi"
 import { hrmCatalogApi } from "./slices/hrmCatalogApi"
 import { hrmAttendanceApi } from "./slices/hrmAttendanceApi"
+import { invoicesApi } from "./slices/invoicesApi"
 
 export const store = configureStore({
   reducer: {
@@ -53,6 +54,7 @@ export const store = configureStore({
     [transfersApi.reducerPath]: transfersApi.reducer,
     [hrmCatalogApi.reducerPath]: hrmCatalogApi.reducer,
     [hrmAttendanceApi.reducerPath]: hrmAttendanceApi.reducer,
+    [invoicesApi.reducerPath]: invoicesApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -72,6 +74,7 @@ export const store = configureStore({
       , transfersApi.middleware
       , hrmCatalogApi.middleware
       , hrmAttendanceApi.middleware
+      , invoicesApi.middleware
     ),
 })
 
