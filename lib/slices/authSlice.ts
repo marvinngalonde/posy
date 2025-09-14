@@ -1,4 +1,6 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit"
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit"
+import { API_URL } from "../api-url"
 
 interface User {
   id: string
@@ -12,127 +14,158 @@ interface AuthState {
   user: User | null
   token: string | null
   isAuthenticated: boolean
-  loading: boolean
-  error: string | null
+}
+
+interface LoginRequest {
+  email: string
+  password: string
+}
+
+interface SignupRequest {
+  name: string
+  email: string
+  password: string
+}
+
+interface AuthResponse {
+  user: User
+  token: string
 }
 
 const initialState: AuthState = {
   user: null,
   token: null,
   isAuthenticated: false,
-  loading: false,
-  error: null,
 }
 
-export const loginUser = createAsyncThunk(
-  "auth/login",
-  async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
-    try {
-      const response = await fetch("/api/users/login", {
+// RTK Query API
+ const authApi = createApi({
+  reducerPath: "authApi",
+  baseQuery: fetchBaseQuery({
+    baseUrl: API_URL,
+    prepareHeaders: (headers, { getState }) => {
+      const token = (getState() as { auth: AuthState }).auth.token
+      if (token) {
+        headers.set("authorization", `Bearer ${token}`)
+      }
+      return headers
+    },
+  }),
+  tagTypes: ["User"],
+  endpoints: (builder) => ({
+    login: builder.mutation<AuthResponse, LoginRequest>({
+      query: (credentials) => ({
+        url: "/users/login",
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Login failed")
-      return data
-    } catch (err: any) {
-      return rejectWithValue(err.message)
-    }
-  }
-)
-
-export const signupUser = createAsyncThunk(
-  "auth/signupUser",
-  async ({ name, email, password }: { name: string; email: string; password: string }, { rejectWithValue }) => {
-    try {
-      const response = await fetch("/api/users", {
+        body: credentials,
+      }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(setCredentials(data))
+          
+          // Store in localStorage
+          if (typeof window !== "undefined") {
+            localStorage.setItem("token", data.token)
+            localStorage.setItem("username", data.user.name)
+            localStorage.setItem("email", data.user.email)
+            localStorage.setItem("UserRole", data.user.role)
+            localStorage.setItem("UserId", data.user.id)
+          }
+        } catch (error) {
+          // Error handling is done by RTK Query automatically
+        }
+      },
+    }),
+    signup: builder.mutation<{ message: string }, SignupRequest>({
+      query: (userData) => ({
+        url: "/users",
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Signup failed")
-      return data
-    } catch (err: any) {
-      return rejectWithValue(err.message)
-    }
-  }
-)
+        body: userData,
+      }),
+    }),
+    getProfile: builder.query<User, void>({
+      query: () => "/users/profile",
+      providesTags: ["User"],
+    }),
+    refreshToken: builder.mutation<AuthResponse, void>({
+      query: () => ({
+        url: "/users/refresh",
+        method: "POST",
+      }),
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled
+          dispatch(setCredentials(data))
+          
+          // Update localStorage
+          if (typeof window !== "undefined") {
+            localStorage.setItem("token", data.token)
+          }
+        } catch (error) {
+          dispatch(logout())
+        }
+      },
+    }),
+  }),
+})
 
+// Auth slice for managing auth state
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
+    setCredentials: (state, action: PayloadAction<AuthResponse>) => {
+      state.user = action.payload.user
+      state.token = action.payload.token
+      state.isAuthenticated = true
+    },
     logout: (state) => {
       state.user = null
       state.token = null
       state.isAuthenticated = false
-      localStorage.removeItem("token")
       
-    },
-    clearError: (state) => {
-      state.error = null
+      // Clear localStorage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token")
+        localStorage.removeItem("username")
+        localStorage.removeItem("email")
+        localStorage.removeItem("UserRole")
+        localStorage.removeItem("UserId")
+      }
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload
       state.isAuthenticated = true
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.loading = true
-        state.error = null
-      })
-      .addCase(loginUser.fulfilled, (state, action) => {
-        state.loading = false
-        state.error = null
-        state.user = action.payload.user
-        state.token = action.payload.token
-        state.isAuthenticated = true
-        // Store in localStorage
-        if (typeof window !== "undefined") {
-          localStorage.setItem("token", action.payload.token)
-          localStorage.setItem("username", action.payload.user.name)
-          localStorage.setItem("email", action.payload.user.email)
-          localStorage.setItem("UserRole", action.payload.user.role)
-          localStorage.setItem("UserId", action.payload.user.id)
+    loadFromStorage: (state) => {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("token")
+        const username = localStorage.getItem("username")
+        const email = localStorage.getItem("email")
+        const role = localStorage.getItem("UserRole")
+        const id = localStorage.getItem("UserId")
+        
+        if (token && username && email && role && id) {
+          state.token = token
+          state.user = { id, name: username, email, role }
+          state.isAuthenticated = true
         }
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.error.message || "Login failed"
-      })
-      .addCase(signupUser.pending, (state) => {
-        state.loading = false
-        state.error = null
-      })
-      .addCase(signupUser.fulfilled, (state, action) => {
-        // Do NOT set isAuthenticated here!
-        state.loading = false
-        state.error = null
-        // Optionally, you can clear user/token here
-        state.user = null
-        state.token = null
-        state.isAuthenticated = false
-      })
-      .addCase(signupUser.rejected, (state, action) => {
-        state.loading = false
-        state.error = action.error.message || "Signup failed"
-      })
-      .addCase(logout, (state) => {
-        state.user = null
-        state.token = null
-        state.isAuthenticated = false
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("username")
-          localStorage.removeItem("email")
-          localStorage.removeItem("token")
-        }
-      })
+      }
+    },
   },
 })
 
-export const { logout, clearError, setUser } = authSlice.actions
+// Export hooks and actions
+export const {
+  useLoginMutation,
+  useSignupMutation,
+  useGetProfileQuery,
+  useRefreshTokenMutation,
+} = authApi
+
+export const { setCredentials, logout, setUser, loadFromStorage } = authSlice.actions
 export default authSlice.reducer
+
+// Export the API reducer for store configuration
+export { authApi }

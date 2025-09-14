@@ -9,32 +9,33 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAppDispatch, useAppSelector } from "@/lib/hooks"
-import { loginUser, clearError } from "@/lib/slices/authSlice"
-import { setDatabaseConfig } from "@/lib/slices/databaseSlice"
+import {  useAppSelector } from "@/lib/hooks"
+import { useLoginMutation } from "@/lib/slices/authSlice"
+// import { setDatabaseConfig } from "@/lib/slices/databaseSlice"
 // import { DatabaseSetup } from "@/components/database-setup"
 import Ballpit from '@/components/ui/ballpit'
 
 export default function LoginPage() {
   const router = useRouter()
-  const dispatch = useAppDispatch()
-  const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth)
+  // const dispatch = useAppDispatch()
+  const { isAuthenticated } = useAppSelector((state) => state.auth)
   // const { isConfigured } = useAppSelector((state) => state.database)
-  const [isCheckingConfig, setIsCheckingConfig] = useState(true) // New loading state
+  const [login, { isLoading, error }] = useLoginMutation()
+  // const [isCheckingConfig, setIsCheckingConfig] = useState(true) // New loading state
 
-  useEffect(() => {
-    // Check if database is already configured
-    const savedConfig = localStorage.getItem("dbConfig")
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig)
-        dispatch(setDatabaseConfig(config))
-      } catch (error) {
-        console.error("Failed to parse saved database config:", error)
-      }
-    }
-    setIsCheckingConfig(false) // Mark check as complete
-  }, [dispatch])
+  // useEffect(() => {
+  //   // Check if database is already configured
+  //   const savedConfig = localStorage.getItem("dbConfig")
+  //   if (savedConfig) {
+  //     try {
+  //       const config = JSON.parse(savedConfig)
+  //       dispatch(setDatabaseConfig(config))
+  //     } catch (error) {
+  //       console.error("Failed to parse saved database config:", error)
+  //     }
+  //   }
+  //   setIsCheckingConfig(false) // Mark check as complete
+  // }, [dispatch])
 
   const [formData, setFormData] = useState({
     email: "",
@@ -47,10 +48,6 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router])
 
-  useEffect(() => {
-    dispatch(clearError())
-  }, [dispatch])
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
@@ -61,21 +58,22 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await dispatch(loginUser(formData)).unwrap()
+      await login(formData).unwrap()
       router.push("/dashboard")
     } catch (error) {
       console.log("Login error:", error)
+      // Error is automatically handled by RTK Query and available in the error state
     }
   }
 
-  // Show loading state while checking configuration
-  if (isCheckingConfig) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
+  // // Show loading state while checking configuration
+  // if (isCheckingConfig) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gray-100">
+  //       <Loader2 className="h-8 w-8 animate-spin" />
+  //     </div>
+  //   )
+  // }
 
 //   return !isConfigured ? (
 //   <DatabaseSetup />
@@ -145,12 +143,19 @@ return(
 
           {error && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {/* RTK Query error can be a string or an object */}
+                {'data' in error && error.data 
+                  ? (error.data as any).error || (error.data as any).message || 'Login failed'
+                  : 'message' in error 
+                  ? error.message 
+                  : 'Login failed'}
+              </AlertDescription>
             </Alert>
           )}
 
-          <Button type="submit" className="w-full bg-[#1a237e] hover:bg-[#23308c]" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" className="w-full bg-[#1a237e] hover:bg-[#23308c]" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign In
           </Button>
         </form>

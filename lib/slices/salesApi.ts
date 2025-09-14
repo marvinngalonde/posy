@@ -1,9 +1,10 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { Sale, PaginatedSalesResponse } from '@/lib/types/sales';
+import { API_URL } from '../api-url';
 
 export const salesApi = createApi({
   reducerPath: 'salesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/pos/sales' }),
+  baseQuery: fetchBaseQuery({ baseUrl: API_URL}),
   tagTypes: ['Sale'],
   endpoints: (builder) => ({
     getSales: builder.query<PaginatedSalesResponse, { page: number; limit: number; search: string }>({

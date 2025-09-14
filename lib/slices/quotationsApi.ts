@@ -1,9 +1,10 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { Quotation, QuotationItem, PaginatedQuotationsResponse } from '@/lib/types/quotation';
+import { API_URL } from '../api-url';
 
 export const quotationsApi = createApi({
   reducerPath: 'quotationsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/quotations' }),
+  baseQuery: fetchBaseQuery({ baseUrl: API_URL + '/quotations' }),
   tagTypes: ['Quotation'],
   endpoints: (builder) => ({
     getQuotations: builder.query<PaginatedQuotationsResponse, { page: number; limit: number; search: string }>({
