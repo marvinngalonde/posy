@@ -31,8 +31,8 @@ export default function ExpenseCategoryPage() {
   const [deleteCategory, { isLoading: isDeleting }] = useDeleteExpenseCategoryMutation()
 
   const filteredCategories = useMemo(() => {
-    if (!categories) return []
-    return categories.filter(
+    if (!categories?.data) return []
+    return categories.data.filter(
       (cat) =>
         cat.name?.toLowerCase().includes(search.toLowerCase()) ||
         (cat.description && cat.description.toLowerCase().includes(search.toLowerCase()))
@@ -54,7 +54,7 @@ export default function ExpenseCategoryPage() {
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await updateCategory({ id: editForm.id, body: { name: editForm.name, description: editForm.description } }).unwrap()
+      await updateCategory({ id: editForm.id, data: { name: editForm.name, description: editForm.description } }).unwrap()
       toast.success("Category updated successfully")
       setIsEditDialogOpen(false)
     } catch (error) {

@@ -8,6 +8,7 @@ import type {
   ApiResponse,
   ProductSearchParams
 } from "@/lib/types/prisma"
+import Units from "@/app/settings/units/page"
 
 /**
  * GET - Retrieve products with pagination and search
@@ -32,17 +33,17 @@ export async function GET(req: NextRequest): Promise<NextResponse<Product | Pagi
       const product = await prisma.products.findUnique({
         where: { id: parseInt(id) },
         include: {
-          category: { select: { id: true, name: true, code: true } },
-          brand: { select: { id: true, name: true } },
-          unit: { select: { id: true, name: true, short_name: true } },
-          warehouse: { select: { id: true, name: true } },
+          categories: { select: { id: true, name: true, code: true } },
+          brands: { select: { id: true, name: true } },
+          units: { select: { id: true, name: true, short_name: true } },
+          warehouses: { select: { id: true, name: true } },
           adjustment_items: {
             select: {
               id: true,
               quantity: true,
               type: true,
               created_at: true,
-              adjustment: {
+              adjustments: {
                 select: {
                   reference: true,
                   date: true
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<Product | Pagi
               quantity: true,
               unit_price: true,
               created_at: true,
-              sale: {
+              sales: {
                 select: {
                   reference: true,
                   date: true

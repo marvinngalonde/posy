@@ -19,6 +19,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { useRouter } from "next/navigation"
 import { Pagination as UIPagination, PaginationContent, PaginationItem } from "@/components/ui/pagination"
 
+interface EditExpenseForm {
+  id: string
+  date: string
+  category_id: string
+  amount: string
+  description: string
+}
+
 export default function ExpenseListPage() {
   const router = useRouter()
   const [page, setPage] = useState(1)
@@ -37,7 +45,7 @@ export default function ExpenseListPage() {
   const [deleteExpense, { isLoading: isDeleting }] = useDeleteExpenseMutation()
 
   // Edit form state
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<EditExpenseForm>({
     id: "",
     date: "",
     category_id: "",
@@ -60,10 +68,10 @@ export default function ExpenseListPage() {
     e.preventDefault()
     try {
       await updateExpense({
-        id: editForm.id,
-        body: {
+        id: parseInt(editForm.id),
+        data: {
           date: editForm.date,
-          category_id: editForm.category_id,
+          category_id: parseInt(editForm.category_id),
           amount: parseFloat(editForm.amount),
           description: editForm.description,
         },
@@ -78,9 +86,9 @@ export default function ExpenseListPage() {
   const openEditDialog = (expense: Expense) => {
     setSelectedExpense(expense)
     setEditForm({
-      id: expense.id,
+      id: expense.id.toString(),
       date: expense.date,
-      category_id: expense.category_id,
+      category_id: expense.category_id.toString(),
       amount: expense.amount.toString(),
       description: expense.description || "",
     })
@@ -263,8 +271,8 @@ export default function ExpenseListPage() {
                 <SelectValue placeholder={categoriesLoading ? "Loading..." : "Choose Category"} />
               </SelectTrigger>
               <SelectContent>
-                {categories?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                {categories?.data?.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

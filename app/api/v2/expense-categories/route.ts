@@ -105,10 +105,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<ExpenseCatego
       )
     }
 
-    // Check if name already exists
-    const existingCategory = await prisma.expense_categories.findFirst({
-      where: { name: { equals: name, mode: 'insensitive' } }
+    // Check if name already exists (case-insensitive)
+    const allCategories = await prisma.expense_categories.findMany({
+      select: { name: true }
     })
+    const existingCategory = allCategories.find(
+      cat => cat.name.toLowerCase() === name.trim().toLowerCase()
+    )
 
     if (existingCategory) {
       return NextResponse.json(
@@ -175,13 +178,14 @@ export async function PUT(req: NextRequest): Promise<NextResponse<ExpenseCategor
     }
 
     // Check if name is being changed and if it already exists
-    if (name !== existingCategory.name) {
-      const duplicateName = await prisma.expense_categories.findFirst({
-        where: {
-          name: { equals: name, mode: 'insensitive' },
-          id: { not: parseInt(id) }
-        }
+    if (name.trim().toLowerCase() !== existingCategory.name.toLowerCase()) {
+      const allCategories = await prisma.expense_categories.findMany({
+        where: { id: { not: parseInt(id) } },
+        select: { name: true }
       })
+      const duplicateName = allCategories.find(
+        cat => cat.name.toLowerCase() === name.trim().toLowerCase()
+      )
 
       if (duplicateName) {
         return NextResponse.json(
@@ -242,13 +246,14 @@ export async function PATCH(req: NextRequest): Promise<NextResponse<ExpenseCateg
     }
 
     // If name is being updated, validate it doesn't exist
-    if (body.name && body.name !== existingCategory.name) {
-      const duplicateName = await prisma.expense_categories.findFirst({
-        where: {
-          name: { equals: body.name, mode: 'insensitive' },
-          id: { not: parseInt(id) }
-        }
+    if (body.name && body.name.trim().toLowerCase() !== existingCategory.name.toLowerCase()) {
+      const allCategories = await prisma.expense_categories.findMany({
+        where: { id: { not: parseInt(id) } },
+        select: { name: true }
       })
+      const duplicateName = allCategories.find(
+        cat => cat.name.toLowerCase() === body.name.trim().toLowerCase()
+      )
 
       if (duplicateName) {
         return NextResponse.json(

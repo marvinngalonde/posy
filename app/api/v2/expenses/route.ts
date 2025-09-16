@@ -29,8 +29,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<Expense | Pagi
       const expense = await prisma.expenses.findUnique({
         where: { id: parseInt(id) },
         include: {
-          category: { select: { id: true, name: true, description: true } },
-          createdBy: { select: { id: true, name: true } }
+          expense_categories: { select: { id: true, name: true, description: true } },
+          users: { select: { id: true, name: true } }
         }
       })
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<Expense | Pagi
       where.OR = [
         { reference: { contains: search, mode: 'insensitive' as const } },
         { description: { contains: search, mode: 'insensitive' as const } },
-        { category: { name: { contains: search, mode: 'insensitive' as const } } }
+        { expense_categories: { name: { contains: search, mode: 'insensitive' as const } } }
       ]
     }
 
@@ -80,8 +80,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<Expense | Pagi
         take: limit,
         orderBy: { date: "desc" },
         include: {
-          category: { select: { name: true } },
-          createdBy: { select: { name: true } }
+          expense_categories: { select: { name: true } },
+          users: { select: { name: true } }
         }
       }),
       prisma.expenses.count({ where })
@@ -173,8 +173,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Expense |
         created_by: created_by || 1
       },
       include: {
-        category: { select: { name: true } },
-        createdBy: { select: { name: true } }
+        expense_categories: { select: { name: true } },
+        users: { select: { name: true } }
       }
     })
 
@@ -258,8 +258,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Expense | 
         updated_at: new Date()
       },
       include: {
-        category: { select: { name: true } },
-        createdBy: { select: { name: true } }
+        expense_categories: { select: { name: true } },
+        users: { select: { name: true } }
       }
     })
 
@@ -334,8 +334,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Expense 
         updated_at: new Date()
       },
       include: {
-        category: { select: { name: true } },
-        createdBy: { select: { name: true } }
+        expense_categories: { select: { name: true } },
+        users: { select: { name: true } }
       }
     })
 

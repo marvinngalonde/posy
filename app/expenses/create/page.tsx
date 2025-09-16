@@ -12,6 +12,14 @@ import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
+interface CreateExpenseForm {
+  date: string
+  warehouseId: string
+  categoryId: string
+  amount: string
+  details: string
+}
+
 export default function CreateExpense() {
   const router = useRouter()
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
@@ -34,8 +42,8 @@ export default function CreateExpense() {
     try {
       await createExpense({
         date,
-        warehouse_id: warehouseId,
-        category_id: categoryId,
+        warehouse_id: parseInt(warehouseId),
+        category_id: parseInt(categoryId),
         amount: parseFloat(amount),
         description: details,
         reference: `EXP_${Date.now()}`,
@@ -67,7 +75,7 @@ export default function CreateExpense() {
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses?.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
+                    <SelectItem key={w.id} value={w.id.toString()}>
                       {w.name}
                     </SelectItem>
                   ))}
@@ -81,8 +89,8 @@ export default function CreateExpense() {
                   <SelectValue placeholder={categoriesLoading ? "Loading..." : "Choose Category"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
+                  {categories?.data?.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>
                       {c.name}
                     </SelectItem>
                   ))}

@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import type {
   Quotation,
-  CreateQuotationInput,
-  UpdateQuotationInput,
+ 
   PaginatedResponse,
   ApiResponse,
-  QuotationSearchParams
+ 
 } from "@/lib/types/prisma"
 
 /**
@@ -137,7 +136,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<Quotation | A
         tax_amount: tax_amount || 0,
         total: total || 0,
         created_by: 1, // TODO: Get from auth
-        items: {
+        quotation_items: {
           create: items.map((item: any) => ({
             product_id: item.product_id,
             quantity: item.quantity,
@@ -147,9 +146,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<Quotation | A
         }
       },
       include: {
-        customer: { select: { name: true } },
-        warehouse: { select: { name: true } },
-        items: true,
+        customers: { select: { name: true } },
+        warehouses: { select: { name: true } },
+        quotation_items: true,
       },
     })
 
@@ -238,7 +237,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse<Quotation | Ap
           tax_amount: tax_amount !== undefined ? tax_amount : existingQuotation.tax_amount,
           total: total !== undefined ? total : existingQuotation.total,
           updated_at: new Date(),
-          items: {
+          quotation_items: {
             create: items.map((item: any) => ({
               product_id: item.product_id,
               quantity: item.quantity,
@@ -248,9 +247,9 @@ export async function PUT(req: NextRequest): Promise<NextResponse<Quotation | Ap
           }
         },
         include: {
-          customer: { select: { name: true } },
-          warehouse: { select: { name: true } },
-          items: true,
+          customers: { select: { name: true } },
+          warehouses: { select: { name: true } },
+          quotation_items: true,
         },
       })
     })
@@ -349,9 +348,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse<Quotation | 
         updatedAt: new Date(),
       },
       include: {
-        customer: { select: { name: true } },
-        warehouse: { select: { name: true } },
-        items: true,
+        customers: { select: { name: true } },
+        warehouses: { select: { name: true } },
+        quotation_items: true,
       },
     })
 
