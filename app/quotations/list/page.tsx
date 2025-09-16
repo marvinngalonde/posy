@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { generateDocumentPDF } from '@/lib/utils/pdf'
+import { useGetOrganizationQuery } from '@/lib/slices/organizationApi'
 import type React from "react"
 import { ViewQuotationDialog } from "./view-quotation/page"
 import { useGetQuotationsQuery, useDeleteQuotationMutation, useGetQuotationItemsQuery, useGetQuotationByIdQuery } from "@/lib/slices/quotationsApi"
@@ -77,6 +79,7 @@ export default function QuotationList() {
   const [createInvoice, { isLoading: isCreatingInvoice }] = useCreateInvoiceMutation()
   const { data: fullQuotationData } = useGetQuotationByIdQuery(quotationIdForActions || "", { skip: !quotationIdForActions });
   const { data: quotationItemsData } = useGetQuotationItemsQuery(quotationIdForActions || "", { skip: !quotationIdForActions });
+  const { data: organization } = useGetOrganizationQuery();
   
   const quotations = (data?.data || []) as unknown as QuotationListItem[];
   const pagination = data?.pagination;
@@ -108,8 +111,8 @@ export default function QuotationList() {
     const tableData = quotations.map(quotation => [
       quotation.date,
       quotation.reference,
-      quotation.customer_name || '',
-      quotation.warehouse_name || '',
+      quotation.customers?.name || quotation.customer_name || '',
+      quotation.warehouses?.name || quotation.warehouse_name || '',
       quotation.status,
       `$${Number(quotation.total).toFixed(2)}`
     ])
@@ -130,8 +133,8 @@ export default function QuotationList() {
       quotations.map(quotation => ({
         Date: quotation.date,
         Reference: quotation.reference,
-        Customer: quotation.customer_name || '',
-        Warehouse: quotation.warehouse_name || '',
+        Customer: quotation.customers?.name || quotation.customer_name || '',
+        Warehouse: quotation.warehouses?.name || quotation.warehouse_name || '',
         Status: quotation.status,
         Total: Number(quotation.total)
       }))
@@ -144,221 +147,46 @@ export default function QuotationList() {
 
   const exportSingleQuotationToPDF = async (quotationId: string) => {
     try {
-      const quotationResponse = await fetch(`/api/quotations/${quotationId}`);
-      const quotationData: FullQuotation = await quotationResponse.json();
+      const quotationResponse = await fetch(`/api/v2/quotations?id=${quotationId}`);
+      const quotationResult = await quotationResponse.json();
+      const quotationData = quotationResult;
+
+      const itemsResponse = await fetch(`/api/v2/quotations/items?quotation_id=${quotationId}`);
+      const itemsResult = await itemsResponse.json();
+      const itemsData = itemsResult.data || [];
   
-      const itemsResponse = await fetch(`/api/quotations/items?quotation_id=${quotationId}`);
-      const itemsData: QuotationItem[] = await itemsResponse.json();
-  
-      const doc = new jsPDF();
-      
-      // Brand colors
-      const brandOrange = [255, 150, 0];
-      const darkGray = [45, 45, 45];
-      const lightGray = [240, 240, 240];
-  
-      // Header section with curved design
-      doc.setFillColor(darkGray[0], darkGray[1], darkGray[2]);
-      doc.rect(0, 0, 210, 45, 'F');
-      
-      // Orange curved accent
-      doc.setFillColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      // Create curved shape using multiple rectangles and circles
-      doc.ellipse(170, 45, 60, 25, 'F');
-      doc.rect(140, 20, 70, 25, 'F');
-      
-      // Brand logo placeholder (you can replace with actual logo)
-      doc.setFillColor(255, 255, 255);
-      doc.rect(15, 8, 8, 8, 'F');
-      doc.setFontSize(10);
-      doc.setTextColor(255, 255, 255);
-      doc.text("BRANDNAME", 28, 15);
-      doc.setFontSize(6);
-      doc.text("YOUR TAGLINE HERE", 28, 18);
-  
-      // INVOICE title
-      doc.setFontSize(32);
-      doc.setTextColor(255, 255, 255);
-      doc.text("QUOTATION", 130, 30);
-  
-      let yPos = 65;
-  
-      // Client and Invoice details section
-      doc.setFontSize(10);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      
-      // Left column - INVOICE TO
-      doc.text("QUOTATION TO", 15, yPos);
-      yPos += 5;
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-      doc.text(quotationData.customer_name || "Customer Name", 15, yPos);
-      yPos += 4;
-      doc.text("Business Address", 15, yPos);
-      yPos += 4;
-      doc.text("City, State ZIP", 15, yPos);
-      yPos += 4;
-      doc.text("Phone Number", 15, yPos);
-      yPos += 4;
-      doc.text("Email Address", 15, yPos);
-  
-      // Right column - Invoice details
-      let rightColY = 65;
-      doc.setFontSize(10);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.text("QUOTATION DATE", 140, rightColY);
-      rightColY += 5;
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-      doc.text(new Date(quotationData.date).toLocaleDateString(), 140, rightColY);
-      
-      rightColY += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.text("QUOTATION NO.", 15, rightColY + 25);
-      doc.text("DUE DATE", 140, rightColY);
-      rightColY += 5;
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-      doc.text(quotationData.reference || "QUO-001", 15, rightColY + 25);
-      doc.text(quotationData.valid_until ? new Date(quotationData.valid_until).toLocaleDateString() : "30 DAYS", 140, rightColY);
-      
-      rightColY += 10;
-      doc.setFontSize(10);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.text("AMOUNT DUE", 140, rightColY);
-      rightColY += 5;
-      doc.setFontSize(14);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`$${Number(quotationData.total).toFixed(2)}`, 140, rightColY);
-  
-      yPos = 120;
-  
-      // Items table with orange header
-      if (itemsData.length > 0) {
-        autoTable(doc, {
-          startY: yPos,
-          head: [['#', 'Product Description', 'QTY', 'RATE', 'AMOUNT']],
-          body: itemsData.map((item, index) => [
-            (index + 1).toString().padStart(2, '0'),
-            item.product_name || item.name || 'Product Description',
-            item.quantity.toString(),
-            Number(item.price).toFixed(2),
-            Number(item.subtotal).toFixed(2),
-          ]),
-          styles: { 
-            fontSize: 9, 
-            cellPadding: 4,
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1
-          },
-          headStyles: { 
-            fillColor: brandOrange, 
-            textColor: [255, 255, 255], 
-            fontStyle: 'bold',
-            fontSize: 10
-          },
-          alternateRowStyles: { fillColor: lightGray },
-          columnStyles: {
-            0: { halign: 'center', cellWidth: 15 },
-            1: { cellWidth: 90 },
-            2: { halign: 'center', cellWidth: 20 },
-            3: { halign: 'right', cellWidth: 25 },
-            4: { halign: 'right', cellWidth: 25 }
-          }
-        });
-  
-        yPos = (doc as any).lastAutoTable.finalY + 10;
-      }
-  
-      // Summary section with orange background
-      const summaryStartY = yPos;
-      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-      doc.rect(120, summaryStartY, 75, 45, 'F');
-  
-      yPos += 8;
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      
-      // Subtotal
-      doc.text("Subtotal", 125, yPos);
-      doc.text(`$${Number(quotationData.subtotal).toFixed(2)}`, 185, yPos, { align: 'right' });
-      yPos += 6;
-      
-      // Tax
-      doc.text("Tax Rate", 125, yPos);
-      doc.text(`$${Number(quotationData.tax_amount).toFixed(2)}`, 185, yPos, { align: 'right' });
-      yPos += 6;
-      
-      // Discount (if any)
-      if (quotationData.discount > 0) {
-        doc.text("Discount", 125, yPos);
-        doc.text(`-$${Number(quotationData.discount).toFixed(2)}`, 185, yPos, { align: 'right' });
-        yPos += 6;
-      }
-      
-      // Total with orange background
-      doc.setFillColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.rect(120, yPos, 75, 10, 'F');
-      doc.setFontSize(12);
-      doc.setTextColor(255, 255, 255);
-      doc.text("TOTAL", 125, yPos + 6);
-      doc.text(`$${Number(quotationData.total).toFixed(2)}`, 185, yPos + 6, { align: 'right' });
-  
-      yPos += 20;
-  
-      // Thank you note and terms
-      doc.setFontSize(12);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.text("Thank you for Business", 15, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Bank Account Details", 15, yPos);
-      yPos += 4;
-      doc.text("Bank :", 15, yPos);
-      yPos += 4;
-      doc.text("A/c No :", 15, yPos);
-      yPos += 4;
-      doc.text("IBAN :", 15, yPos);
-      yPos += 4;
-      doc.text("Swift Code :", 15, yPos);
-      yPos += 8;
-  
-      doc.setFontSize(10);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.text("Terms & Conditions", 15, yPos);
-      yPos += 5;
-      doc.setFontSize(8);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Please send payment within 30 days of receiving this quotation.", 15, yPos);
-      yPos += 3;
-      doc.text("There will be 10% interest charge per month on late quotations.", 15, yPos);
-  
-      // Signature section
-      doc.setFontSize(10);
-      doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.text("Signature", 140, yPos - 20);
-      
-      // Signature line
-      doc.setDrawColor(0, 0, 0);
-      doc.line(140, yPos - 5, 180, yPos - 5);
-  
-      // Bottom curved orange accent
-      yPos = doc.internal.pageSize.height - 30;
-      doc.setFillColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-      doc.ellipse(20, yPos + 15, 40, 15, 'F');
-      doc.rect(0, yPos + 10, 50, 20, 'F');
-  
-      // Notes if any
-      if (quotationData.notes) {
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Notes: ${quotationData.notes}`, 15, yPos - 10);
-      }
-  
-      doc.save(`quotation-${quotationData.reference}.pdf`);
+      // Prepare data for PDF generation
+      const pdfConfig = {
+        title: 'Quotation',
+        documentNumber: quotationData.reference || 'QUO-001',
+        documentDate: new Date(quotationData.date),
+        clientInfo: {
+          name: quotationData.customers?.name || quotationData.customer_name || 'Customer Name',
+          email: quotationData.customers?.email || '',
+          phone: quotationData.customers?.phone || '',
+          address: quotationData.customers?.address || '',
+          city: quotationData.customers?.city || '',
+          country: quotationData.customers?.country || ''
+        },
+        items: itemsData.map((item: any) => ({
+          description: item.products?.name || item.product_name || 'Product',
+          quantity: Number(item.quantity || 0),
+          unitPrice: Number(item.price || item.unit_price || 0),
+          total: Number(item.subtotal || (item.quantity * item.price) || 0)
+        })),
+        totals: {
+          subtotal: Number(quotationData.subtotal || 0),
+          tax: Number(quotationData.tax_amount || 0),
+          discount: Number(quotationData.discount || 0),
+          total: Number(quotationData.total || 0)
+        },
+        notes: quotationData.notes || (organization?.quotation_footer || 'Thank you for your business!'),
+        dueDate: quotationData.valid_until ? new Date(quotationData.valid_until) : undefined,
+        status: quotationData.status || 'Pending'
+      };
+
+      const doc = generateDocumentPDF(pdfConfig, organization);
+      doc.save(`quotation-${pdfConfig.documentNumber}.pdf`);
       toast.success("Quotation PDF generated successfully!");
     } catch (error) {
       console.error("Error generating quotation PDF:", error);
@@ -438,14 +266,14 @@ export default function QuotationList() {
           date: new Date(fullQuotationData.date).toISOString().split('T')[0],
           customer_id: fullQuotationData.customer_id || '',
           warehouse_id: fullQuotationData.warehouse_id || '',
-          subtotal: Number(Number(fetchedFullQuotation.subtotal || 0).toFixed(2)),
-tax_rate: Number(Number(fetchedFullQuotation.tax_rate || 0).toFixed(2)),
-tax_amount: Number(Number(fetchedFullQuotation.tax_amount || 0).toFixed(2)),
-discount: Number(Number(fetchedFullQuotation.discount || 0).toFixed(2)),
-shipping: Number(Number(fetchedFullQuotation.shipping || 0).toFixed(2)),
-total: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
+          subtotal: Number(Number(fullQuotationData.subtotal || 0).toFixed(2)),
+          tax_rate: Number(Number(fullQuotationData.tax_rate || 0).toFixed(2)),
+          tax_amount: Number(Number(fullQuotationData.tax_amount || 0).toFixed(2)),
+          discount: Number(Number(fullQuotationData.discount || 0).toFixed(2)),
+          shipping: Number(Number(fullQuotationData.shipping || 0).toFixed(2)),
+          total: Number(Number(fullQuotationData.total || 0).toFixed(2)),
           paid: 0, 
-          due: Number(fullQuotationData.total.toFixed(2)), 
+          due: Number(Number(fullQuotationData.total || 0).toFixed(2)), 
           status: "pending", 
           payment_status: "unpaid", 
           notes: fullQuotationData.notes || null,
@@ -456,11 +284,11 @@ total: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
             product_id: item.product_id,
             name: item.product_name || item.name || 'N/A',
             code: item.product_code || item.code || 'N/A',
-            quantity: Number(item.quantity.toFixed(2)),
-            unit_price: Number(item.price.toFixed(2)),
-            discount: Number(item.discount.toFixed(2)),
-            tax: Number(item.tax.toFixed(2)),
-            subtotal: Number((item.price * item.quantity - item.discount + item.tax).toFixed(2)),
+            quantity: Number(Number(item.quantity || 0).toFixed(2)),
+            unit_price: Number(Number(item.price || 0).toFixed(2)),
+            discount: Number(Number(item.discount || 0).toFixed(2)),
+            tax: Number(Number(item.tax || 0).toFixed(2)),
+            subtotal: Number((Number(item.price || 0) * Number(item.quantity || 0) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
           })),
         };
 
@@ -558,8 +386,8 @@ total: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
                       <tr key={quotation.id} className="border-b hover:bg-gray-50">
                         <td className="p-3">{quotation.date}</td>
                         <td className="p-3 font-medium">{quotation.reference}</td>
-                        <td className="p-3">{quotation.customer_name || ''}</td>
-                        <td className="p-3">{quotation.warehouse_name || ''}</td>
+                        <td className="p-3">{quotation.customers?.name || quotation.customer_name || ''}</td>
+                        <td className="p-3">{quotation.warehouses?.name || quotation.warehouse_name || ''}</td>
                         <td className="p-3">
                           <Badge 
                             variant={quotation.status === 'sent' ? 'default' : 'secondary'}

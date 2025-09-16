@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,49 +7,861 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
-enum Status {
+model adjustment_items {
+  id            Int                   @id @default(autoincrement())
+  adjustment_id Int
+  product_id    Int
+  quantity      Decimal               @db.Decimal(10, 2)
+  type          adjustment_items_type
+  created_at    DateTime?             @default(now()) @db.Timestamp(0)
+  pre_stock     String?               @db.VarChar(50)
+  adjustments   adjustments           @relation(fields: [adjustment_id], references: [id])
+  products      products              @relation(fields: [product_id], references: [id])
+
+  @@index([adjustment_id], map: "adjustment_items_adjustment_id_fkey")
+  @@index([product_id], map: "adjustment_items_product_id_fkey")
+}
+
+model adjustments {
+  id               Int                @id @default(autoincrement())
+  reference        String             @unique @db.VarChar(100)
+  warehouse_id     Int
+  date             DateTime           @db.Date
+  type             adjustments_type
+  notes            String?            @db.Text
+  created_by       Int
+  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?          @db.Timestamp(0)
+  adjustment_items adjustment_items[]
+  users            users              @relation(fields: [created_by], references: [id])
+  warehouses       warehouses         @relation(fields: [warehouse_id], references: [id])
+
+  @@index([created_by], map: "adjustments_created_by_fkey")
+  @@index([warehouse_id], map: "adjustments_warehouse_id_fkey")
+}
+
+model attendance {
+  id          Int               @id @default(autoincrement())
+  employee_id Int
+  date        DateTime          @db.Date
+  time_in     DateTime?         @db.Time(0)
+  time_out    DateTime?         @db.Time(0)
+  break_time  Int?              @default(0)
+  total_hours Decimal?          @default(0.00) @db.Decimal(4, 2)
+  status      attendance_status @default(present)
+  notes       String?           @db.Text
+  created_at  DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?         @db.Timestamp(0)
+  employees   employees         @relation(fields: [employee_id], references: [id])
+
+  @@index([employee_id], map: "attendance_employee_id_fkey")
+}
+
+model brands {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  description String?       @db.Text
+  image       String?       @db.VarChar(500)
+  status      brands_status @default(active)
+  created_at  DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?     @db.Timestamp(0)
+  products    products[]
+}
+
+model categories {
+  id          Int               @id @default(autoincrement())
+  code        String            @unique @db.VarChar(50)
+  name        String            @db.VarChar(255)
+  description String?           @db.Text
+  status      categories_status @default(active)
+  created_at  DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?         @db.Timestamp(0)
+  products    products[]
+}
+
+model companies {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(255)
+  email       String?          @db.VarChar(255)
+  phone       String?          @db.VarChar(50)
+  address     String?          @db.Text
+  city        String?          @db.VarChar(100)
+  country     String?          @db.VarChar(100)
+  tax_number  String?          @db.VarChar(100)
+  logo        String?          @db.VarChar(500)
+  status      companies_status @default(active)
+  created_at  DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?        @db.Timestamp(0)
+  departments departments[]
+}
+
+model currencies {
+  id            Int               @id @default(autoincrement())
+  code          String            @unique @db.VarChar(10)
+  name          String            @db.VarChar(255)
+  symbol        String            @db.VarChar(10)
+  exchange_rate Decimal?          @default(1.0000) @db.Decimal(10, 4)
+  status        currencies_status @default(active)
+  created_at    DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?         @db.Timestamp(0)
+}
+
+model customers {
+  id            Int              @id @default(autoincrement())
+  name          String           @db.VarChar(255)
+  email         String?          @db.VarChar(255)
+  phone         String?          @db.VarChar(50)
+  address       String?          @db.Text
+  city          String?          @db.VarChar(100)
+  country       String?          @db.VarChar(100)
+  tax_number    String?          @db.VarChar(100)
+  credit_limit  Decimal?         @default(0.00) @db.Decimal(10, 2)
+  total_sales   Decimal?         @default(0.00) @db.Decimal(10, 2)
+  total_paid    Decimal?         @default(0.00) @db.Decimal(10, 2)
+  total_due     Decimal?         @default(0.00) @db.Decimal(10, 2)
+  status        customers_status @default(active)
+  created_at    DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?        @db.Timestamp(0)
+  invoices      invoices[]
+  quotations    quotations[]
+  sales         sales[]
+  sales_returns sales_returns[]
+}
+
+model departments {
+  id          Int                @id @default(autoincrement())
+  name        String             @db.VarChar(255)
+  company_id  Int
+  description String?            @db.Text
+  status      departments_status @default(active)
+  created_at  DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?          @db.Timestamp(0)
+  companies   companies          @relation(fields: [company_id], references: [id])
+  employees   employees[]
+
+  @@index([company_id], map: "departments_company_id_fkey")
+}
+
+model employees {
+  id             Int              @id @default(autoincrement())
+  employee_id    Int
+  name           String           @db.VarChar(255)
+  email          String?          @db.VarChar(255)
+  phone          String?          @db.VarChar(50)
+  department_id  Int
+  shift_id       Int
+  position       String?          @db.VarChar(255)
+  salary         Decimal?         @db.Decimal(10, 2)
+  hire_date      DateTime?        @db.Date
+  address        String?          @db.Text
+  status         employees_status @default(active)
+  created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?        @db.Timestamp(0)
+  attendance     attendance[]
+  departments    departments      @relation(fields: [department_id], references: [id])
+  office_shifts  office_shifts    @relation(fields: [shift_id], references: [id])
+  leave_requests leave_requests[]
+
+  @@index([department_id], map: "employees_department_id_fkey")
+  @@index([shift_id], map: "employees_shift_id_fkey")
+}
+
+model expense_categories {
+  id          Int                       @id @default(autoincrement())
+  name        String                    @db.VarChar(255)
+  description String?                   @db.Text
+  status      expense_categories_status @default(active)
+  created_at  DateTime?                 @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?                 @db.Timestamp(0)
+  expenses    expenses[]
+}
+
+model expenses {
+  id                 Int                @id @default(autoincrement())
+  reference          String             @unique @db.VarChar(100)
+  category_id        Int
+  amount             Decimal            @db.Decimal(10, 2)
+  date               DateTime           @db.Date
+  description        String?            @db.Text
+  attachment         String?            @db.VarChar(500)
+  status             expenses_status    @default(pending)
+  created_by         Int
+  created_at         DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?          @db.Timestamp(0)
+  expense_categories expense_categories @relation(fields: [category_id], references: [id])
+  users              users              @relation(fields: [created_by], references: [id])
+
+  @@index([category_id], map: "expenses_category_id_fkey")
+  @@index([created_by], map: "expenses_created_by_fkey")
+}
+
+model holidays {
+  id          Int             @id @default(autoincrement())
+  name        String          @db.VarChar(255)
+  start_date  DateTime        @db.Date
+  end_date    DateTime        @db.Date
+  description String?         @db.Text
+  status      holidays_status @default(active)
+  created_at  DateTime?       @default(now()) @db.Timestamp(0)
+  updated_at  DateTime?       @db.Timestamp(0)
+}
+
+model invoice_items {
+  id         Int       @id @default(autoincrement())
+  invoice_id Int
+  product_id Int
+  quantity   Decimal   @db.Decimal(10, 2)
+  unit_price Decimal   @db.Decimal(10, 2)
+  discount   Decimal?  @default(0.00) @db.Decimal(10, 2)
+  tax        Decimal?  @default(0.00) @db.Decimal(10, 2)
+  subtotal   Decimal   @db.Decimal(10, 2)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  invoices   invoices  @relation(fields: [invoice_id], references: [id])
+  products   products  @relation(fields: [product_id], references: [id])
+
+  @@index([invoice_id], map: "invoice_items_invoice_id_fkey")
+  @@index([product_id], map: "invoice_items_product_id_fkey")
+}
+
+model invoices {
+  id             Int                     @id @default(autoincrement())
+  reference      String                  @unique @db.VarChar(100)
+  customer_id    Int
+  warehouse_id   Int
+  sale_id        Int?
+  quotation_id   Int?
+  date           DateTime                @db.Date
+  due_date       DateTime?               @db.Date
+  subtotal       Decimal?                @default(0.00) @db.Decimal(10, 2)
+  tax_rate       Decimal?                @default(0.00) @db.Decimal(5, 2)
+  tax_amount     Decimal?                @default(0.00) @db.Decimal(10, 2)
+  discount       Decimal?                @default(0.00) @db.Decimal(10, 2)
+  shipping       Decimal?                @default(0.00) @db.Decimal(10, 2)
+  total          Decimal                 @db.Decimal(10, 2)
+  paid           Decimal?                @default(0.00) @db.Decimal(10, 2)
+  due            Decimal?                @default(0.00) @db.Decimal(10, 2)
+  status         invoices_status         @default(draft)
+  payment_status invoices_payment_status @default(unpaid)
+  notes          String?                 @db.Text
+  created_by     Int
+  created_at     DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?               @db.Timestamp(0)
+  invoice_items  invoice_items[]
+  users          users                   @relation(fields: [created_by], references: [id])
+  customers      customers               @relation(fields: [customer_id], references: [id])
+  quotations     quotations?             @relation(fields: [quotation_id], references: [id])
+  sales          sales?                  @relation(fields: [sale_id], references: [id])
+  warehouses     warehouses              @relation(fields: [warehouse_id], references: [id])
+
+  @@index([created_by], map: "invoices_created_by_fkey")
+  @@index([customer_id], map: "invoices_customer_id_fkey")
+  @@index([quotation_id], map: "invoices_quotation_id_fkey")
+  @@index([sale_id], map: "invoices_sale_id_fkey")
+  @@index([warehouse_id], map: "invoices_warehouse_id_fkey")
+}
+
+model leave_requests {
+  id            Int                   @id @default(autoincrement())
+  employee_id   Int
+  leave_type_id Int
+  start_date    DateTime              @db.Date
+  end_date      DateTime              @db.Date
+  days          Int
+  reason        String?               @db.Text
+  status        leave_requests_status @default(pending)
+  approved_by   Int
+  approved_at   DateTime?             @db.Timestamp(0)
+  created_at    DateTime?             @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?             @db.Timestamp(0)
+  users         users                 @relation(fields: [approved_by], references: [id])
+  employees     employees             @relation(fields: [employee_id], references: [id])
+  leave_types   leave_types           @relation(fields: [leave_type_id], references: [id])
+
+  @@index([approved_by], map: "leave_requests_approved_by_fkey")
+  @@index([employee_id], map: "leave_requests_employee_id_fkey")
+  @@index([leave_type_id], map: "leave_requests_leave_type_id_fkey")
+}
+
+model leave_types {
+  id             Int                @id @default(autoincrement())
+  name           String             @db.VarChar(255)
+  days_allowed   Int?               @default(0)
+  status         leave_types_status @default(active)
+  created_at     DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?          @db.Timestamp(0)
+  leave_requests leave_requests[]
+}
+
+model office_shifts {
+  id         Int                  @id @default(autoincrement())
+  name       String               @db.VarChar(255)
+  start_time DateTime             @db.Time(0)
+  end_time   DateTime             @db.Time(0)
+  status     office_shifts_status @default(active)
+  created_at DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at DateTime?            @db.Timestamp(0)
+  employees  employees[]
+}
+
+model organization {
+  id                  Int       @id @default(autoincrement())
+  name                String    @db.VarChar(255)
+  email               String?   @db.VarChar(255)
+  phone               String?   @db.VarChar(50)
+  address             String?   @db.Text
+  city                String?   @db.VarChar(100)
+  state               String?   @db.VarChar(100)
+  country             String?   @db.VarChar(100)
+  postal_code         String?   @db.VarChar(20)
+  tax_number          String?   @db.VarChar(100)
+  website             String?   @db.VarChar(255)
+  logo                String?   @db.VarChar(500)
+  bank_name           String?   @db.VarChar(255)
+  bank_account        String?   @db.VarChar(100)
+  bank_branch         String?   @db.VarChar(255)
+  swift_code          String?   @db.VarChar(50)
+  iban                String?   @db.VarChar(100)
+  currency            String?   @default("USD") @db.VarChar(10)
+  timezone            String?   @default("UTC") @db.VarChar(50)
+  created_at          DateTime? @default(now()) @db.Timestamp(0)
+  updated_at          DateTime? @db.Timestamp(0)
+  currency_symbol     String?   @default("$") @db.VarChar(5)
+  date_format         String?   @default("MM/DD/YYYY") @db.VarChar(20)
+  fax                 String?   @db.VarChar(50)
+  invoice_footer      String?   @db.Text
+  invoice_prefix      String?   @default("INV") @db.VarChar(10)
+  language            String?   @default("en") @db.VarChar(5)
+  payment_terms       String?   @db.Text
+  quotation_footer    String?   @db.Text
+  quotation_prefix    String?   @default("QUO") @db.VarChar(10)
+  registration_number String?   @db.VarChar(100)
+  terms_conditions    String?   @db.Text
+}
+
+model products {
+  id                    Int                     @id @default(autoincrement())
+  name                  String                  @db.VarChar(255)
+  code                  String                  @unique @db.VarChar(100)
+  barcode               String?                 @db.VarChar(255)
+  category_id           Int
+  brand_id              Int
+  unit_id               Int
+  warehouse_id          Int
+  cost                  Decimal                 @default(0.00) @db.Decimal(10, 2)
+  price                 Decimal                 @default(0.00) @db.Decimal(10, 2)
+  stock                 Decimal                 @default(0.00) @db.Decimal(10, 2)
+  alert_quantity        Decimal?                @default(0.00) @db.Decimal(10, 2)
+  description           String?                 @db.Text
+  image                 String?                 @db.VarChar(500)
+  status                products_status         @default(active)
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  adjustment_items      adjustment_items[]
+  invoice_items         invoice_items[]
+  brands                brands                  @relation(fields: [brand_id], references: [id])
+  categories            categories              @relation(fields: [category_id], references: [id])
+  units                 units                   @relation(fields: [unit_id], references: [id])
+  warehouses            warehouses              @relation(fields: [warehouse_id], references: [id])
+  purchase_items        purchase_items[]
+  purchase_return_items purchase_return_items[]
+  quotation_items       quotation_items[]
+  sale_items            sale_items[]
+  sales_return_items    sales_return_items[]
+  transfer_items        transfer_items[]
+
+  @@index([brand_id], map: "products_brand_id_fkey")
+  @@index([category_id], map: "products_category_id_fkey")
+  @@index([unit_id], map: "products_unit_id_fkey")
+  @@index([warehouse_id], map: "products_warehouse_id_fkey")
+}
+
+model purchase_items {
+  id                    Int                     @id @default(autoincrement())
+  purchase_id           Int
+  product_id            Int
+  quantity              Decimal                 @db.Decimal(10, 2)
+  unit_cost             Decimal                 @db.Decimal(10, 2)
+  discount              Decimal?                @default(0.00) @db.Decimal(10, 2)
+  tax                   Decimal?                @default(0.00) @db.Decimal(10, 2)
+  subtotal              Decimal                 @db.Decimal(10, 2)
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  products              products                @relation(fields: [product_id], references: [id])
+  purchases             purchases               @relation(fields: [purchase_id], references: [id])
+  purchase_return_items purchase_return_items[]
+
+  @@index([product_id], map: "purchase_items_product_id_fkey")
+  @@index([purchase_id], map: "purchase_items_purchase_id_fkey")
+}
+
+model purchase_return_items {
+  id               Int              @id @default(autoincrement())
+  return_id        Int
+  product_id       Int
+  purchase_item_id Int
+  quantity         Decimal          @db.Decimal(10, 2)
+  unit_cost        Decimal          @db.Decimal(10, 2)
+  discount         Decimal?         @default(0.00) @db.Decimal(10, 2)
+  tax              Decimal?         @default(0.00) @db.Decimal(10, 2)
+  subtotal         Decimal          @db.Decimal(10, 2)
+  created_at       DateTime?        @default(now()) @db.Timestamp(0)
+  products         products         @relation(fields: [product_id], references: [id])
+  purchase_items   purchase_items   @relation(fields: [purchase_item_id], references: [id])
+  purchase_returns purchase_returns @relation(fields: [return_id], references: [id])
+
+  @@index([product_id], map: "purchase_return_items_product_id_fkey")
+  @@index([purchase_item_id], map: "purchase_return_items_purchase_item_id_fkey")
+  @@index([return_id], map: "purchase_return_items_return_id_fkey")
+}
+
+model purchase_returns {
+  id                    Int                     @id @default(autoincrement())
+  reference             String                  @unique @db.VarChar(100)
+  purchase_id           Int
+  supplier_id           Int
+  warehouse_id          Int
+  date                  DateTime                @db.Date
+  subtotal              Decimal?                @default(0.00) @db.Decimal(10, 2)
+  tax_rate              Decimal?                @default(0.00) @db.Decimal(5, 2)
+  tax_amount            Decimal?                @default(0.00) @db.Decimal(10, 2)
+  discount              Decimal?                @default(0.00) @db.Decimal(10, 2)
+  shipping              Decimal?                @default(0.00) @db.Decimal(10, 2)
+  total                 Decimal                 @db.Decimal(10, 2)
+  status                purchase_returns_status @default(completed)
+  notes                 String?                 @db.Text
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  purchase_return_items purchase_return_items[]
+  purchases             purchases               @relation(fields: [purchase_id], references: [id])
+  suppliers             suppliers               @relation(fields: [supplier_id], references: [id])
+  warehouses            warehouses              @relation(fields: [warehouse_id], references: [id])
+
+  @@index([purchase_id], map: "purchase_returns_purchase_id_fkey")
+  @@index([supplier_id], map: "purchase_returns_supplier_id_fkey")
+  @@index([warehouse_id], map: "purchase_returns_warehouse_id_fkey")
+}
+
+model purchases {
+  id               Int                      @id @default(autoincrement())
+  reference        String                   @unique @db.VarChar(100)
+  supplier_id      Int
+  warehouse_id     Int
+  date             DateTime                 @db.Date
+  subtotal         Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  tax_rate         Decimal?                 @default(0.00) @db.Decimal(5, 2)
+  tax_amount       Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  discount         Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  shipping         Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  total            Decimal                  @db.Decimal(10, 2)
+  paid             Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  due              Decimal?                 @default(0.00) @db.Decimal(10, 2)
+  status           purchases_status         @default(pending)
+  payment_status   purchases_payment_status @default(unpaid)
+  notes            String?                  @db.Text
+  created_by       Int
+  created_at       DateTime?                @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?                @db.Timestamp(0)
+  purchase_items   purchase_items[]
+  purchase_returns purchase_returns[]
+  users            users                    @relation(fields: [created_by], references: [id])
+  suppliers        suppliers                @relation(fields: [supplier_id], references: [id])
+  warehouses       warehouses               @relation(fields: [warehouse_id], references: [id])
+
+  @@index([created_by], map: "purchases_created_by_fkey")
+  @@index([supplier_id], map: "purchases_supplier_id_fkey")
+  @@index([warehouse_id], map: "purchases_warehouse_id_fkey")
+}
+
+model quotation_items {
+  id           Int        @id @default(autoincrement())
+  quotation_id Int
+  product_id   Int
+  quantity     Decimal    @db.Decimal(10, 2)
+  unit_price   Decimal    @db.Decimal(10, 2)
+  discount     Decimal?   @default(0.00) @db.Decimal(10, 2)
+  tax          Decimal?   @default(0.00) @db.Decimal(10, 2)
+  subtotal     Decimal    @db.Decimal(10, 2)
+  created_at   DateTime?  @default(now()) @db.Timestamp(0)
+  products     products   @relation(fields: [product_id], references: [id])
+  quotations   quotations @relation(fields: [quotation_id], references: [id])
+
+  @@index([product_id], map: "quotation_items_product_id_fkey")
+  @@index([quotation_id], map: "quotation_items_quotation_id_fkey")
+}
+
+model quotations {
+  id              Int               @id @default(autoincrement())
+  reference       String            @unique @db.VarChar(100)
+  customer_id     Int
+  warehouse_id    Int
+  date            DateTime          @db.Date
+  valid_until     DateTime?         @db.Date
+  subtotal        Decimal?          @default(0.00) @db.Decimal(10, 2)
+  tax_rate        Decimal?          @default(0.00) @db.Decimal(5, 2)
+  tax_amount      Decimal?          @default(0.00) @db.Decimal(10, 2)
+  discount        Decimal?          @default(0.00) @db.Decimal(10, 2)
+  shipping        Decimal?          @default(0.00) @db.Decimal(10, 2)
+  total           Decimal           @db.Decimal(10, 2)
+  status          quotations_status @default(pending)
+  notes           String?           @db.Text
+  created_by      Int
+  created_at      DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at      DateTime?         @db.Timestamp(0)
+  invoices        invoices[]
+  quotation_items quotation_items[]
+  users           users             @relation(fields: [created_by], references: [id])
+  customers       customers         @relation(fields: [customer_id], references: [id])
+  warehouses      warehouses        @relation(fields: [warehouse_id], references: [id])
+
+  @@index([created_by], map: "quotations_created_by_fkey")
+  @@index([customer_id], map: "quotations_customer_id_fkey")
+  @@index([warehouse_id], map: "quotations_warehouse_id_fkey")
+}
+
+model sale_items {
+  id                 Int                  @id @default(autoincrement())
+  sale_id            Int
+  product_id         Int
+  quantity           Decimal              @db.Decimal(10, 2)
+  unit_price         Decimal              @db.Decimal(10, 2)
+  discount           Decimal?             @default(0.00) @db.Decimal(10, 2)
+  tax                Decimal?             @default(0.00) @db.Decimal(10, 2)
+  subtotal           Decimal              @db.Decimal(10, 2)
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  products           products             @relation(fields: [product_id], references: [id])
+  sales              sales                @relation(fields: [sale_id], references: [id])
+  sales_return_items sales_return_items[]
+
+  @@index([product_id], map: "sale_items_product_id_fkey")
+  @@index([sale_id], map: "sale_items_sale_id_fkey")
+}
+
+model sales {
+  id             Int                  @id @default(autoincrement())
+  reference      String               @unique @db.VarChar(100)
+  customer_id    Int
+  warehouse_id   Int
+  date           DateTime             @db.Date
+  subtotal       Decimal?             @default(0.00) @db.Decimal(10, 2)
+  tax_rate       Decimal?             @default(0.00) @db.Decimal(5, 2)
+  tax_amount     Decimal?             @default(0.00) @db.Decimal(10, 2)
+  discount       Decimal?             @default(0.00) @db.Decimal(10, 2)
+  shipping       Decimal?             @default(0.00) @db.Decimal(10, 2)
+  total          Decimal              @db.Decimal(10, 2)
+  paid           Decimal?             @default(0.00) @db.Decimal(10, 2)
+  due            Decimal?             @default(0.00) @db.Decimal(10, 2)
+  status         sales_status         @default(pending)
+  payment_status sales_payment_status @default(unpaid)
+  notes          String?              @db.Text
+  created_by     Int
+  created_at     DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?            @db.Timestamp(0)
+  invoices       invoices[]
+  sale_items     sale_items[]
+  users          users                @relation(fields: [created_by], references: [id])
+  customers      customers            @relation(fields: [customer_id], references: [id])
+  warehouses     warehouses           @relation(fields: [warehouse_id], references: [id])
+  sales_returns  sales_returns[]
+
+  @@index([created_by], map: "sales_created_by_fkey")
+  @@index([customer_id], map: "sales_customer_id_fkey")
+  @@index([warehouse_id], map: "sales_warehouse_id_fkey")
+}
+
+model sales_return_items {
+  id            Int           @id @default(autoincrement())
+  return_id     Int
+  product_id    Int
+  sale_item_id  Int
+  quantity      Decimal       @db.Decimal(10, 2)
+  unit_price    Decimal       @db.Decimal(10, 2)
+  discount      Decimal?      @default(0.00) @db.Decimal(10, 2)
+  tax           Decimal?      @default(0.00) @db.Decimal(10, 2)
+  subtotal      Decimal       @db.Decimal(10, 2)
+  created_at    DateTime?     @default(now()) @db.Timestamp(0)
+  products      products      @relation(fields: [product_id], references: [id])
+  sales_returns sales_returns @relation(fields: [return_id], references: [id])
+  sale_items    sale_items    @relation(fields: [sale_item_id], references: [id])
+
+  @@index([product_id], map: "sales_return_items_product_id_fkey")
+  @@index([return_id], map: "sales_return_items_return_id_fkey")
+  @@index([sale_item_id], map: "sales_return_items_sale_item_id_fkey")
+}
+
+model sales_returns {
+  id                 Int                  @id @default(autoincrement())
+  reference          String               @unique @db.VarChar(100)
+  sale_id            Int
+  customer_id        Int
+  warehouse_id       Int
+  date               DateTime             @db.Date
+  subtotal           Decimal?             @default(0.00) @db.Decimal(10, 2)
+  tax_rate           Decimal?             @default(0.00) @db.Decimal(5, 2)
+  tax_amount         Decimal?             @default(0.00) @db.Decimal(10, 2)
+  discount           Decimal?             @default(0.00) @db.Decimal(10, 2)
+  shipping           Decimal?             @default(0.00) @db.Decimal(10, 2)
+  total              Decimal              @db.Decimal(10, 2)
+  status             sales_returns_status @default(completed)
+  notes              String?              @db.Text
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  sales_return_items sales_return_items[]
+  customers          customers            @relation(fields: [customer_id], references: [id])
+  sales              sales                @relation(fields: [sale_id], references: [id])
+  warehouses         warehouses           @relation(fields: [warehouse_id], references: [id])
+
+  @@index([customer_id], map: "sales_returns_customer_id_fkey")
+  @@index([sale_id], map: "sales_returns_sale_id_fkey")
+  @@index([warehouse_id], map: "sales_returns_warehouse_id_fkey")
+}
+
+model settings {
+  key   String  @id @db.VarChar(255)
+  value String? @db.Text
+}
+
+model suppliers {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  email            String?            @db.VarChar(255)
+  phone            String?            @db.VarChar(50)
+  address          String?            @db.Text
+  city             String?            @db.VarChar(100)
+  country          String?            @db.VarChar(100)
+  tax_number       String?            @db.VarChar(100)
+  total_purchases  Decimal?           @default(0.00) @db.Decimal(10, 2)
+  total_paid       Decimal?           @default(0.00) @db.Decimal(10, 2)
+  total_due        Decimal?           @default(0.00) @db.Decimal(10, 2)
+  status           suppliers_status   @default(active)
+  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?          @db.Timestamp(0)
+  purchase_returns purchase_returns[]
+  purchases        purchases[]
+}
+
+model transfer_items {
+  id          Int       @id @default(autoincrement())
+  transfer_id Int
+  product_id  Int
+  quantity    Decimal   @db.Decimal(10, 2)
+  unit_cost   Decimal   @db.Decimal(10, 2)
+  discount    Decimal?  @default(0.00) @db.Decimal(10, 2)
+  tax         Decimal?  @default(0.00) @db.Decimal(10, 2)
+  subtotal    Decimal   @db.Decimal(10, 2)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  products    products  @relation(fields: [product_id], references: [id])
+  transfers   transfers @relation(fields: [transfer_id], references: [id])
+
+  @@index([product_id], map: "transfer_items_product_id_fkey")
+  @@index([transfer_id], map: "transfer_items_transfer_id_fkey")
+}
+
+model transfers {
+  id                                                 Int              @id @default(autoincrement())
+  reference                                          String           @unique @db.VarChar(100)
+  from_warehouse_id                                  Int
+  to_warehouse_id                                    Int
+  date                                               DateTime         @db.Date
+  subtotal                                           Decimal?         @default(0.00) @db.Decimal(10, 2)
+  tax_rate                                           Decimal?         @default(0.00) @db.Decimal(5, 2)
+  tax_amount                                         Decimal?         @default(0.00) @db.Decimal(10, 2)
+  discount                                           Decimal?         @default(0.00) @db.Decimal(10, 2)
+  shipping                                           Decimal?         @default(0.00) @db.Decimal(10, 2)
+  total                                              Decimal          @db.Decimal(10, 2)
+  status                                             transfers_status @default(pending)
+  notes                                              String?          @db.Text
+  created_by                                         Int
+  created_at                                         DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at                                         DateTime?        @db.Timestamp(0)
+  transfer_items                                     transfer_items[]
+  users                                              users            @relation(fields: [created_by], references: [id])
+  warehouses_transfers_from_warehouse_idTowarehouses warehouses       @relation("transfers_from_warehouse_idTowarehouses", fields: [from_warehouse_id], references: [id])
+  warehouses_transfers_to_warehouse_idTowarehouses   warehouses       @relation("transfers_to_warehouse_idTowarehouses", fields: [to_warehouse_id], references: [id])
+
+  @@index([created_by], map: "transfers_created_by_fkey")
+  @@index([from_warehouse_id], map: "transfers_from_warehouse_id_fkey")
+  @@index([to_warehouse_id], map: "transfers_to_warehouse_id_fkey")
+}
+
+model units {
+  id              Int          @id @default(autoincrement())
+  name            String       @db.VarChar(255)
+  short_name      String       @db.VarChar(50)
+  base_unit       String?      @db.VarChar(255)
+  operator        String?      @db.VarChar(10)
+  operation_value Decimal?     @default(1.0000) @db.Decimal(10, 4)
+  status          units_status @default(active)
+  created_at      DateTime?    @default(now()) @db.Timestamp(0)
+  updated_at      DateTime?    @db.Timestamp(0)
+  products        products[]
+}
+
+model users {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(255)
+  email          String           @unique @db.VarChar(255)
+  password       String           @db.VarChar(255)
+  role           users_role       @default(user)
+  avatar         String?          @db.VarChar(500)
+  status         users_status     @default(active)
+  created_at     DateTime?        @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?        @db.Timestamp(0)
+  adjustments    adjustments[]
+  expenses       expenses[]
+  invoices       invoices[]
+  leave_requests leave_requests[]
+  purchases      purchases[]
+  quotations     quotations[]
+  sales          sales[]
+  transfers      transfers[]
+}
+
+model warehouses {
+  id                                                Int                @id @default(autoincrement())
+  name                                              String             @db.VarChar(255)
+  phone                                             String?            @db.VarChar(50)
+  email                                             String?            @db.VarChar(255)
+  address                                           String?            @db.Text
+  city                                              String?            @db.VarChar(100)
+  country                                           String?            @db.VarChar(100)
+  zip_code                                          String?            @db.VarChar(20)
+  status                                            warehouses_status  @default(active)
+  created_at                                        DateTime?          @default(now()) @db.Timestamp(0)
+  updated_at                                        DateTime?          @db.Timestamp(0)
+  adjustments                                       adjustments[]
+  invoices                                          invoices[]
+  products                                          products[]
+  purchase_returns                                  purchase_returns[]
+  purchases                                         purchases[]
+  quotations                                        quotations[]
+  sales                                             sales[]
+  sales_returns                                     sales_returns[]
+  transfers_transfers_from_warehouse_idTowarehouses transfers[]        @relation("transfers_from_warehouse_idTowarehouses")
+  transfers_transfers_to_warehouse_idTowarehouses   transfers[]        @relation("transfers_to_warehouse_idTowarehouses")
+}
+
+enum expense_categories_status {
   active
   inactive
 }
 
-enum AdjustmentType {
+enum leave_types_status {
+  active
+  inactive
+}
+
+enum adjustment_items_type {
   addition
   subtraction
 }
 
-enum AttendanceStatus {
+enum adjustments_type {
+  addition
+  subtraction
+}
+
+enum brands_status {
+  active
+  inactive
+}
+
+enum categories_status {
+  active
+  inactive
+}
+
+enum departments_status {
+  active
+  inactive
+}
+
+enum office_shifts_status {
+  active
+  inactive
+}
+
+enum users_role {
+  admin
+  manager
+  user
+}
+
+enum currencies_status {
+  active
+  inactive
+}
+
+enum holidays_status {
+  active
+  inactive
+}
+
+enum units_status {
+  active
+  inactive
+}
+
+enum users_status {
+  active
+  inactive
+}
+
+enum attendance_status {
   present
   absent
   late
   half_day
 }
 
-enum ExpenseStatus {
+enum expenses_status {
   pending
   approved
   rejected
 }
 
-enum PurchaseStatus {
+enum leave_requests_status {
   pending
-  received
-  cancelled
+  approved
+  rejected
 }
 
-enum PaymentStatus {
-  unpaid
-  partial
-  paid
+enum warehouses_status {
+  active
+  inactive
 }
 
-enum SaleStatus {
+enum companies_status {
+  active
+  inactive
+}
+
+enum employees_status {
+  active
+  inactive
+}
+
+enum suppliers_status {
+  active
+  inactive
+}
+
+enum transfers_status {
   pending
   completed
   cancelled
 }
 
-enum QuotationStatus {
+enum customers_status {
+  active
+  inactive
+}
+
+enum purchase_returns_status {
+  pending
+  completed
+  cancelled
+}
+
+enum quotations_status {
   pending
   sent
   accepted
@@ -63,587 +869,51 @@ enum QuotationStatus {
   expired
 }
 
-enum TransferStatus {
+enum sales_returns_status {
   pending
   completed
   cancelled
 }
 
-enum UserRole {
-  admin
-  manager
-  user
+enum purchases_status {
+  pending
+  received
+  cancelled
 }
 
-// Models
-model adjustments {
-  id          Int      @id @default(autoincrement())
-  reference   String   @unique @db.VarChar(100)
-  warehouse_id Int
-  date        DateTime @db.Date
-  type        AdjustmentType
-  notes       String?  @db.Text
-  created_by  Int
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  warehouse   warehouses @relation(fields: [warehouse_id], references: [id])
-  createdBy   users?    @relation("adjustments_createdBy", fields: [created_by], references: [id])
-  items       adjustment_items[]
+enum sales_status {
+  pending
+  completed
+  cancelled
 }
 
-model adjustment_items {
-  id            Int      @id @default(autoincrement())
-  adjustment_id Int
-  product_id    Int
-  quantity      Decimal  @db.Decimal(10,2)
-  type          AdjustmentType
-  created_at    DateTime? @default(now()) @db.Timestamp(0)
-  pre_stock     String?  @db.VarChar(50)
-  adjustment    adjustments @relation(fields: [adjustment_id], references: [id])
-  product       products    @relation(fields: [product_id], references: [id])
+enum products_status {
+  active
+  inactive
 }
 
-model attendance {
-  id           Int      @id @default(autoincrement())
-  employee_id  Int
-  date         DateTime @db.Date
-  time_in      DateTime? @db.Time
-  time_out     DateTime? @db.Time
-  break_time   Int?     @default(0)
-  total_hours  Decimal? @default(0.00) @db.Decimal(4,2)
-  status       AttendanceStatus @default(present)
-  notes        String?  @db.Text
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  employee     employees @relation(fields: [employee_id], references: [id])
+enum purchases_payment_status {
+  unpaid
+  partial
+  paid
 }
 
-model brands {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
-  image       String?  @db.VarChar(500)
-  status      Status   @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  products    products[]
+enum sales_payment_status {
+  unpaid
+  partial
+  paid
 }
 
-model categories {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique @db.VarChar(50)
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
-  status      Status   @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  products    products[]
+enum invoices_status {
+  draft
+  sent
+  paid
+  overdue
+  cancelled
 }
 
-model companies {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  email       String?  @db.VarChar(255)
-  phone       String?  @db.VarChar(50)
-  address     String?  @db.Text
-  city        String?  @db.VarChar(100)
-  country     String?  @db.VarChar(100)
-  tax_number  String?  @db.VarChar(100)
-  logo        String?  @db.VarChar(500)
-  status      Status   @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  departments departments[]
-}
-
-model currencies {
-  id           Int      @id @default(autoincrement())
-  code         String   @unique @db.VarChar(10)
-  name         String   @db.VarChar(255)
-  symbol       String   @db.VarChar(10)
-  exchange_rate Decimal? @default(1.0000) @db.Decimal(10,4)
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-}
-
-
-
-model customers {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(255)
-  email        String?  @db.VarChar(255)
-  phone        String?  @db.VarChar(50)
-  address      String?  @db.Text
-  city         String?  @db.VarChar(100)
-  country      String?  @db.VarChar(100)
-  tax_number   String?  @db.VarChar(100)
-  credit_limit Decimal? @default(0.00) @db.Decimal(10,2)
-  total_sales  Decimal? @default(0.00) @db.Decimal(10,2)
-  total_paid   Decimal? @default(0.00) @db.Decimal(10,2)
-  total_due    Decimal? @default(0.00) @db.Decimal(10,2)
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  sales        sales[]
-  sales_returns sales_returns[]
-  quotations   quotations[]
-}
-
-model departments {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  company_id  Int
-  description String?  @db.Text
-  status      Status   @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  company     companies? @relation(fields: [company_id], references: [id])
-  employees   employees[]
-}
-
-model employees {
-  id           Int      @id @default(autoincrement())
-  employee_id  Int
-  name         String   @db.VarChar(255)
-  email        String?  @db.VarChar(255)
-  phone        String?  @db.VarChar(50)
-  department_id Int
-  shift_id     Int
-  position     String?  @db.VarChar(255)
-  salary       Decimal? @db.Decimal(10,2)
-  hire_date    DateTime? @db.Date
-  address      String?  @db.Text
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  department   departments? @relation(fields: [department_id], references: [id])
-  shift        office_shifts? @relation(fields: [shift_id], references: [id])
-  attendance   attendance[]
-  leave_requests leave_requests[]
-}
-
-model office_shifts {
-  id         Int      @id @default(autoincrement())
-  name       String   @db.VarChar(255)
-  start_time DateTime @db.Time
-  end_time   DateTime @db.Time
-  status     Status   @default(active)
-  created_at DateTime? @default(now()) @db.Timestamp(0)
-  updated_at DateTime? @updatedAt @db.Timestamp(0)
-  employees  employees[]
-}
-
-model holidays {
-  id         Int      @id @default(autoincrement())
-  name       String   @db.VarChar(255)
-  start_date DateTime @db.Date
-  end_date   DateTime @db.Date
-  description String? @db.Text
-  status     Status   @default(active)
-  created_at DateTime? @default(now()) @db.Timestamp(0)
-  updated_at DateTime? @updatedAt @db.Timestamp(0)
-}
-
-model leave_types {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  days_allowed Int?    @default(0)
-  status      Status   @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  leave_requests leave_requests[]
-}
-
-model leave_requests {
-  id           Int      @id @default(autoincrement())
-  employee_id  Int
-  leave_type_id Int
-  start_date   DateTime @db.Date
-  end_date     DateTime @db.Date
-  days         Int      @db.Int
-  reason       String?  @db.Text
-  status       ExpenseStatus @default(pending)
-  approved_by  Int
-  approved_at  DateTime? @db.Timestamp(0)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  employee     employees @relation(fields: [employee_id], references: [id])
-  leave_type   leave_types @relation(fields: [leave_type_id], references: [id])
-  approvedBy   users?    @relation("leave_requests_approvedBy", fields: [approved_by], references: [id])
-}
-
-model expense_categories {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
-  status      Status   @default(active)
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  expenses    expenses[]
-}
-
-model expenses {
-  id          Int      @id @default(autoincrement())
-  reference   String   @unique @db.VarChar(100)
-  category_id Int
-  amount      Decimal  @db.Decimal(10,2)
-  date        DateTime @db.Date
-  description String?  @db.Text
-  attachment  String?  @db.VarChar(500)
-  status      ExpenseStatus @default(pending)
-  created_by  Int
-  created_at  DateTime? @default(now()) @db.Timestamp(0)
-  updated_at  DateTime? @updatedAt @db.Timestamp(0)
-  category    expense_categories? @relation(fields: [category_id], references: [id])
-  createdBy   users?    @relation("expenses_createdBy", fields: [created_by], references: [id])
-}
-
-model products {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(255)
-  code         String   @unique @db.VarChar(100)
-  barcode      String?  @db.VarChar(255)
-  category_id  Int
-  brand_id     Int
-  unit_id      Int
-  warehouse_id Int
-  cost         Decimal  @default(0.00) @db.Decimal(10,2)
-  price        Decimal  @default(0.00) @db.Decimal(10,2)
-  stock        Decimal  @default(0.00) @db.Decimal(10,2)
-  alert_quantity Decimal? @default(0.00) @db.Decimal(10,2)
-  description  String?  @db.Text
-  image        String?  @db.VarChar(500)
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  category     categories? @relation(fields: [category_id], references: [id])
-  brand        brands?     @relation(fields: [brand_id], references: [id])
-  unit         units?      @relation(fields: [unit_id], references: [id])
-  warehouse    warehouses? @relation(fields: [warehouse_id], references: [id])
-  adjustment_items adjustment_items[]
-  purchase_items purchase_items[]
-  purchase_return_items purchase_return_items[]
-  sale_items sale_items[]
-  sales_return_items sales_return_items[]
-  transfer_items transfer_items[]
-  quotation_items quotation_items[]
-}
-
-model purchases {
-  id           Int      @id @default(autoincrement())
-  reference    String   @unique @db.VarChar(100)
-  supplier_id  Int
-  warehouse_id Int
-  date         DateTime @db.Date
-  subtotal     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax_rate     Decimal? @default(0.00) @db.Decimal(5,2)
-  tax_amount   Decimal? @default(0.00) @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  shipping     Decimal? @default(0.00) @db.Decimal(10,2)
-  total        Decimal  @db.Decimal(10,2)
-  paid         Decimal? @default(0.00) @db.Decimal(10,2)
-  due          Decimal? @default(0.00) @db.Decimal(10,2)
-  status       PurchaseStatus @default(pending)
-  payment_status PaymentStatus @default(unpaid)
-  notes        String?  @db.Text
-  created_by   Int
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  supplier     suppliers? @relation(fields: [supplier_id], references: [id])
-  warehouse    warehouses? @relation(fields: [warehouse_id], references: [id])
-  createdBy    users?      @relation("purchases_createdBy", fields: [created_by], references: [id])
-  items        purchase_items[]
-  purchase_returns purchase_returns[]
-}
-
-model purchase_items {
-  id           Int      @id @default(autoincrement())
-  purchase_id  Int
-  product_id   Int
-  quantity     Decimal  @db.Decimal(10,2)
-  unit_cost    Decimal  @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax          Decimal? @default(0.00) @db.Decimal(10,2)
-  subtotal     Decimal  @db.Decimal(10,2)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  purchase     purchases @relation(fields: [purchase_id], references: [id])
-  product      products  @relation(fields: [product_id], references: [id])
-  purchase_return_items purchase_return_items[]
-}
-
-model purchase_returns {
-  id           Int      @id @default(autoincrement())
-  reference    String   @unique @db.VarChar(100)
-  purchase_id  Int
-  supplier_id  Int
-  warehouse_id Int
-  date         DateTime @db.Date
-  subtotal     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax_rate     Decimal? @default(0.00) @db.Decimal(5,2)
-  tax_amount   Decimal? @default(0.00) @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  shipping     Decimal? @default(0.00) @db.Decimal(10,2)
-  total        Decimal  @db.Decimal(10,2)
-  status       SaleStatus @default(completed)
-  notes        String?  @db.Text
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  purchase     purchases @relation(fields: [purchase_id], references: [id])
-  supplier     suppliers @relation(fields: [supplier_id], references: [id])
-  warehouse    warehouses @relation(fields: [warehouse_id], references: [id])
-  items        purchase_return_items[]
-}
-
-model purchase_return_items {
-  id               Int      @id @default(autoincrement())
-  return_id        Int
-  product_id       Int
-  purchase_item_id Int
-  quantity         Decimal  @db.Decimal(10,2)
-  unit_cost        Decimal  @db.Decimal(10,2)
-  discount         Decimal? @default(0.00) @db.Decimal(10,2)
-  tax              Decimal? @default(0.00) @db.Decimal(10,2)
-  subtotal         Decimal  @db.Decimal(10,2)
-  created_at       DateTime? @default(now()) @db.Timestamp(0)
-  purchase_return  purchase_returns @relation(fields: [return_id], references: [id])
-  product          products         @relation(fields: [product_id], references: [id])
-  purchase_item    purchase_items?  @relation(fields: [purchase_item_id], references: [id])
-}
-
-model quotations {
-  id           Int      @id @default(autoincrement())
-  reference    String   @unique @db.VarChar(100)
-  customer_id  Int
-  warehouse_id Int
-  date         DateTime @db.Date
-  valid_until  DateTime? @db.Date
-  subtotal     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax_rate     Decimal? @default(0.00) @db.Decimal(5,2)
-  tax_amount   Decimal? @default(0.00) @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  shipping     Decimal? @default(0.00) @db.Decimal(10,2)
-  total        Decimal  @db.Decimal(10,2)
-  status       QuotationStatus @default(pending)
-  notes        String?  @db.Text
-  created_by   Int
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  customer     customers? @relation(fields: [customer_id], references: [id])
-  warehouse    warehouses? @relation("quotations_warehouse", fields: [warehouse_id], references: [id])
-  createdBy    users?      @relation("quotations_createdBy", fields: [created_by], references: [id])
-  items        quotation_items[]
-}
-
-model quotation_items {
-  id            Int      @id @default(autoincrement())
-  quotation_id  Int      @db.Int
-  product_id    Int
-  quantity      Decimal  @db.Decimal(10,2)
-  unit_price    Decimal  @db.Decimal(10,2)
-  discount      Decimal? @default(0.00) @db.Decimal(10,2)
-  tax           Decimal? @default(0.00) @db.Decimal(10,2)
-  subtotal      Decimal  @db.Decimal(10,2)
-  created_at    DateTime? @default(now()) @db.Timestamp(0)
-  quotation     quotations @relation(fields: [quotation_id], references: [id])
-  product       products   @relation(fields: [product_id], references: [id])
-}
-
-model sales {
-  id           Int      @id @default(autoincrement())
-  reference    String   @unique @db.VarChar(100)
-  customer_id  Int
-  warehouse_id Int
-  date         DateTime @db.Date
-  subtotal     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax_rate     Decimal? @default(0.00) @db.Decimal(5,2)
-  tax_amount   Decimal? @default(0.00) @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  shipping     Decimal? @default(0.00) @db.Decimal(10,2)
-  total        Decimal  @db.Decimal(10,2)
-  paid         Decimal? @default(0.00) @db.Decimal(10,2)
-  due          Decimal? @default(0.00) @db.Decimal(10,2)
-  status       SaleStatus @default(pending)
-  payment_status PaymentStatus @default(unpaid)
-  notes        String?  @db.Text
-  created_by   Int
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  customer     customers? @relation(fields: [customer_id], references: [id])
-  warehouse    warehouses? @relation(fields: [warehouse_id], references: [id])
-  createdBy    users?      @relation("sales_createdBy", fields: [created_by], references: [id])
-  items        sale_items[]
-  sales_returns sales_returns[]
-}
-
-model sale_items {
-  id           Int      @id @default(autoincrement())
-  sale_id      Int
-  product_id   Int
-  quantity     Decimal  @db.Decimal(10,2)
-  unit_price   Decimal  @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax          Decimal? @default(0.00) @db.Decimal(10,2)
-  subtotal     Decimal  @db.Decimal(10,2)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  sale         sales    @relation(fields: [sale_id], references: [id])
-  product      products @relation(fields: [product_id], references: [id])
-  sales_return_items sales_return_items[]
-}
-
-model sales_returns {
-  id           Int      @id @default(autoincrement())
-  reference    String   @unique @db.VarChar(100)
-  sale_id      Int
-  customer_id  Int
-  warehouse_id Int
-  date         DateTime @db.Date
-  subtotal     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax_rate     Decimal? @default(0.00) @db.Decimal(5,2)
-  tax_amount   Decimal? @default(0.00) @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  shipping     Decimal? @default(0.00) @db.Decimal(10,2)
-  total        Decimal  @db.Decimal(10,2)
-  status       SaleStatus @default(completed)
-  notes        String?  @db.Text
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  sale         sales     @relation(fields: [sale_id], references: [id])
-  customer     customers @relation(fields: [customer_id], references: [id])
-  warehouse    warehouses @relation(fields: [warehouse_id], references: [id])
-  items        sales_return_items[]
-}
-
-model sales_return_items {
-  id           Int      @id @default(autoincrement())
-  return_id    Int
-  product_id   Int
-  sale_item_id Int
-  quantity     Decimal  @db.Decimal(10,2)
-  unit_price   Decimal  @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax          Decimal? @default(0.00) @db.Decimal(10,2)
-  subtotal     Decimal  @db.Decimal(10,2)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  sales_return sales_returns @relation(fields: [return_id], references: [id])
-  product      products     @relation(fields: [product_id], references: [id])
-  sale_item    sale_items?  @relation(fields: [sale_item_id], references: [id])
-}
-
-model suppliers {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(255)
-  email        String?  @db.VarChar(255)
-  phone        String?  @db.VarChar(50)
-  address      String?  @db.Text
-  city         String?  @db.VarChar(100)
-  country      String?  @db.VarChar(100)
-  tax_number   String?  @db.VarChar(100)
-  total_purchases Decimal? @default(0.00) @db.Decimal(10,2)
-  total_paid   Decimal? @default(0.00) @db.Decimal(10,2)
-  total_due    Decimal? @default(0.00) @db.Decimal(10,2)
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  purchases    purchases[]
-  purchase_returns purchase_returns[]
-}
-
-model transfers {
-  id                 Int      @id @default(autoincrement())
-  reference          String   @unique @db.VarChar(100)
-  from_warehouse_id  Int
-  to_warehouse_id    Int
-  date               DateTime @db.Date
-  subtotal           Decimal? @default(0.00) @db.Decimal(10,2)
-  tax_rate           Decimal? @default(0.00) @db.Decimal(5,2)
-  tax_amount         Decimal? @default(0.00) @db.Decimal(10,2)
-  discount           Decimal? @default(0.00) @db.Decimal(10,2)
-  shipping           Decimal? @default(0.00) @db.Decimal(10,2)
-  total              Decimal  @db.Decimal(10,2)
-  status             TransferStatus @default(pending)
-  notes              String?  @db.Text
-  created_by   Int
-  created_at         DateTime? @default(now()) @db.Timestamp(0)
-  updated_at         DateTime? @updatedAt @db.Timestamp(0)
-  fromWarehouse      warehouses @relation("FromWarehouse", fields: [from_warehouse_id], references: [id])
-  toWarehouse        warehouses @relation("ToWarehouse", fields: [to_warehouse_id], references: [id])
-  createdBy          users?      @relation("transfers_createdBy", fields: [created_by], references: [id])
-  items              transfer_items[]
-}
-
-model transfer_items {
-  id           Int      @id @default(autoincrement())
-  transfer_id  Int
-  product_id   Int
-  quantity     Decimal  @db.Decimal(10,2)
-  unit_cost    Decimal  @db.Decimal(10,2)
-  discount     Decimal? @default(0.00) @db.Decimal(10,2)
-  tax          Decimal? @default(0.00) @db.Decimal(10,2)
-  subtotal     Decimal  @db.Decimal(10,2)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  transfer     transfers @relation(fields: [transfer_id], references: [id])
-  product      products  @relation(fields: [product_id], references: [id])
-}
-
-model units {
-  id            Int      @id @default(autoincrement())
-  name          String   @db.VarChar(255)
-  short_name    String   @db.VarChar(50)
-  base_unit     String?  @db.VarChar(255)
-  operator      String?  @db.VarChar(10)
-  operation_value Decimal? @default(1.0000) @db.Decimal(10,4)
-  status        Status   @default(active)
-  created_at    DateTime? @default(now()) @db.Timestamp(0)
-  updated_at    DateTime? @updatedAt @db.Timestamp(0)
-  products      products[]
-}
-
-model users {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(255)
-  email        String   @unique @db.VarChar(255)
-  password     String   @db.VarChar(255)
-  role         UserRole @default(user)
-  avatar       String?  @db.VarChar(500)
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  
-  // Reverse relations for all the createdBy fields
-  adjustments_created     adjustments[]  @relation("adjustments_createdBy")
-  expenses_created        expenses[]     @relation("expenses_createdBy")
-  purchases_created       purchases[]    @relation("purchases_createdBy")
-  quotations_created      quotations[]   @relation("quotations_createdBy")
-  sales_created           sales[]        @relation("sales_createdBy")
-  transfers_created       transfers[]    @relation("transfers_createdBy")
-  leave_requests_approved leave_requests[] @relation("leave_requests_approvedBy")
-}
-
-model warehouses {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(255)
-  phone        String?  @db.VarChar(50)
-  email        String?  @db.VarChar(255)
-  address      String?  @db.Text
-  city         String?  @db.VarChar(100)
-  country      String?  @db.VarChar(100)
-  zip_code     String?  @db.VarChar(20)
-  status       Status   @default(active)
-  created_at   DateTime? @default(now()) @db.Timestamp(0)
-  updated_at   DateTime? @updatedAt @db.Timestamp(0)
-  adjustments  adjustments[]
-  products     products[]
-  purchases    purchases[]
-  purchase_returns purchase_returns[]
-  sales        sales[]
-  sales_returns sales_returns[]
-  transfersFrom transfers[] @relation("FromWarehouse")
-  transfersTo   transfers[] @relation("ToWarehouse")
-  quotations   quotations[] @relation("quotations_warehouse")
-}
-
-model settings {
-  key   String @id @db.VarChar(255)
-  value String? @db.Text
+enum invoices_payment_status {
+  unpaid
+  partial
+  paid
 }

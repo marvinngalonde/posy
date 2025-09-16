@@ -25,7 +25,7 @@ export async function GET(
   try {
     const { id } = context.params
     const adjustment = await prisma.adjustments.findUnique({
-      where: { id },
+      where: { id: parseInt(id) },
       include: {
         warehouse: { select: { name: true } },
         items: {
@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest, context: any) {
     await prisma.$transaction(async (tx) => {
       // Load existing items to revert stock
       const existingItems = await tx.adjustment_items.findMany({
-        where: { adjustment_id: id }
+        where: { adjustment_id: parseInt(id) }
       })
       // Revert stock changes from existing items
       for (const item of existingItems) {
@@ -79,10 +79,10 @@ export async function PUT(req: NextRequest, context: any) {
         })
       }
       // Delete existing items
-      await tx.adjustment_items.deleteMany({ where: { adjustment_id: id } })
+      await tx.adjustment_items.deleteMany({ where: { adjustment_id: parseInt(id) } })
       // Update header
       await tx.adjustments.update({
-        where: { id },
+        where: { id: parseInt(id) },
         data: {
           warehouse_id: body.warehouse_id,
           date: new Date(body.date),
@@ -99,7 +99,7 @@ export async function PUT(req: NextRequest, context: any) {
         })
         await tx.adjustment_items.create({
           data: {
-            adjustment_id: id,
+            adjustment_id: parseInt(id),
             product_id: item.product_id,
             quantity: item.quantity,
             type: item.type

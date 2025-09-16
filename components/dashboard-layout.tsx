@@ -174,7 +174,7 @@ const menuItems = [
       { label: "Currency", href: "/settings/currencies" },
       { label: "Unit", href: "/settings/units" },
       { label: "Backup", href: "/settings/backup" },
-      { label: "System", href: "/settings/system" },
+      { label: "Systems", href: "/settings/systems" },
     ],
   },
   {

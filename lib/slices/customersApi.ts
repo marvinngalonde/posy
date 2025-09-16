@@ -1,35 +1,30 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-
-export interface Customer {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-  address?: string
-  city?: string
-  country?: string
-  total_sales?: number
-  total_paid?: number
-  total_due?: number
-}
-
-export interface PaginatedCustomersResponse {
-    data: Customer[];
-    pagination: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    };
-}
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type {
+  Customer,
+  CreateCustomerInput,
+  UpdateCustomerInput,
+  PaginatedResponse,
+  CustomerSearchParams
+} from '@/lib/types/prisma';
 
 export const customersApi = createApi({
   reducerPath: 'customersApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/customers' }),
   tagTypes: ['Customer'],
   endpoints: (builder) => ({
-    getCustomers: builder.query<PaginatedCustomersResponse, { page: number; limit: number; search: string }>({
-        query: ({ page, limit, search }) => `/customers?page=${page}&limit=${limit}&search=${search}`,
+    getCustomers: builder.query<PaginatedResponse<Customer>, CustomerSearchParams>({
+        query: (params) => {
+          const searchParams = new URLSearchParams()
+          if (params.page) searchParams.append('page', params.page.toString())
+          if (params.limit) searchParams.append('limit', params.limit.toString())
+          if (params.search) searchParams.append('search', params.search)
+          if (params.name) searchParams.append('name', params.name)
+          if (params.email) searchParams.append('email', params.email)
+          if (params.phone) searchParams.append('phone', params.phone)
+          if (params.sortBy) searchParams.append('sortBy', params.sortBy)
+          if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+          return `?${searchParams.toString()}`
+        },
         providesTags: (result) =>
             result
                 ? [
@@ -38,40 +33,49 @@ export const customersApi = createApi({
                 ]
                 : [{ type: 'Customer', id: 'LIST' }],
     }),
-    getCustomerById: builder.query<Customer, string>({
-      query: (id) => `customers?id=${id}`,
+    getCustomerById: builder.query<Customer, number | string>({
+      query: (id) => `?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Customer', id }],
     }),
-    createCustomer: builder.mutation<Customer, Partial<Customer>>({
-      query: (customer) => ({
-        url: 'customers',
+    createCustomer: builder.mutation<Customer, CreateCustomerInput>({
+      query: (customerData) => ({
+        url: '',
         method: 'POST',
-        body: customer,
+        body: customerData,
       }),
-      invalidatesTags: ['Customer'],
+      invalidatesTags: [{ type: 'Customer', id: 'LIST' }],
     }),
-    updateCustomer: builder.mutation<Customer, { id: string; data: Partial<Customer> }>({
+    updateCustomer: builder.mutation<Customer, { id: number | string; data: UpdateCustomerInput }>({
       query: ({ id, data }) => ({
-        url: 'customers',
+        url: `?id=${id}`,
         method: 'PUT',
-        body: { id, ...data },
+        body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Customer', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Customer', id }, { type: 'Customer', id: 'LIST' }],
     }),
-    deleteCustomer: builder.mutation<void, string>({
+    updateCustomerPartial: builder.mutation<Customer, { id: number | string; data: Partial<UpdateCustomerInput> }>({
+      query: ({ id, data }) => ({
+        url: `?id=${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Customer', id }, { type: 'Customer', id: 'LIST' }],
+    }),
+    deleteCustomer: builder.mutation<{ success: boolean; message: string }, number | string>({
       query: (id) => ({
-        url: `customers?id=${id}`,
+        url: `?id=${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Customer'],
+      invalidatesTags: (result, error, id) => [{ type: 'Customer', id }, { type: 'Customer', id: 'LIST' }],
     }),
   }),
-})
+});
 
 export const {
   useGetCustomersQuery,
   useGetCustomerByIdQuery,
   useCreateCustomerMutation,
   useUpdateCustomerMutation,
+  useUpdateCustomerPartialMutation,
   useDeleteCustomerMutation,
-} = customersApi 
+} = customersApi;

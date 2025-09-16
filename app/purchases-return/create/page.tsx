@@ -58,7 +58,7 @@ export default function CreatePurchaseReturn() {
         setIsLoading(true)
         
         // Fetch suppliers
-        const suppliersRes = await fetch('/api/suppliers')
+        const suppliersRes = await fetch('/api/v2/suppliers')
         const suppliersData = await suppliersRes.json()
         setSuppliers(suppliersData.data || [])
         

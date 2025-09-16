@@ -82,7 +82,7 @@ export default function EditPurchase() {
       const purchase = await purchaseRes.json()
 
       const [suppliersRes, warehousesRes] = await Promise.all([
-        fetch("/api/suppliers"),
+        fetch("/api/v2/suppliers"),
         fetch("/api/settings/warehouses"),
       ])
 
@@ -92,8 +92,8 @@ export default function EditPurchase() {
       const suppliersData = await suppliersRes.json()
       const warehousesData = await warehousesRes.json()
 
-      setSuppliers(suppliersData)
-      setWarehouses(warehousesData)
+      setSuppliers(suppliersData.data || suppliersData)
+      setWarehouses(warehousesData.data || warehousesData)
       setPurchaseData(purchase)
       setSelectedProducts(purchase.items || [])
 

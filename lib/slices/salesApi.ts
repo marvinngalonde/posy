@@ -1,14 +1,33 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { Sale, PaginatedSalesResponse } from '@/lib/types/sales';
-import { API_URL } from '../api-url';
+import type {
+  Sale,
+  CreateSaleInput,
+  UpdateSaleInput,
+  PaginatedResponse,
+  SaleSearchParams
+} from '@/lib/types/prisma';
 
 export const salesApi = createApi({
   reducerPath: 'salesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: API_URL}),
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/pos/sales' }),
   tagTypes: ['Sale'],
   endpoints: (builder) => ({
-    getSales: builder.query<PaginatedSalesResponse, { page: number; limit: number; search: string }>({
-        query: ({ page, limit, search }) => `?page=${page}&limit=${limit}&search=${search}`,
+    getSales: builder.query<PaginatedResponse<Sale>, SaleSearchParams>({
+        query: (params) => {
+          const searchParams = new URLSearchParams()
+          if (params.page) searchParams.append('page', params.page.toString())
+          if (params.limit) searchParams.append('limit', params.limit.toString())
+          if (params.search) searchParams.append('search', params.search)
+          if (params.customer_id) searchParams.append('customer_id', params.customer_id.toString())
+          if (params.warehouse_id) searchParams.append('warehouse_id', params.warehouse_id.toString())
+          if (params.status) searchParams.append('status', params.status)
+          if (params.payment_status) searchParams.append('payment_status', params.payment_status)
+          if (params.date_from) searchParams.append('date_from', params.date_from)
+          if (params.date_to) searchParams.append('date_to', params.date_to)
+          if (params.sortBy) searchParams.append('sortBy', params.sortBy)
+          if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+          return `?${searchParams.toString()}`
+        },
         providesTags: (result) =>
             result
                 ? [
@@ -17,48 +36,35 @@ export const salesApi = createApi({
                 ]
                 : [{ type: 'Sale', id: 'LIST' }],
     }),
-    getSaleById: builder.query<Sale, string>({
-      query: (id) => `/${id}`,
+    getSaleById: builder.query<Sale, number | string>({
+      query: (id) => `?id=${id}`,
       providesTags: (result, error, id) => [{ type: 'Sale', id }],
     }),
-    createSale: builder.mutation<Sale, {
-      reference: string;
-      customer_id: string | null;
-      warehouse_id: string | null;
-      date: string;
-      subtotal: number;
-      tax_rate: number;
-      tax_amount: number;
-      discount: number;
-      shipping: number;
-      total: number;
-      paid: number;
-      due: number;
-      status: string;
-      payment_status: string;
-      notes: string | null;
-      created_by: string | null;
-      items: SaleItem[];
-      payment: { payment_choice: string; payment_note: string | null };
-    }>(
-      {
-        query: (newSale) => ({
-          url: '',
-          method: 'POST',
-          body: newSale,
-        }),
-        invalidatesTags: [{ type: 'Sale', id: 'LIST' }],
-      },
-    ),
-    updateSale: builder.mutation<Sale, { id: string; data: Partial<Sale> }>({
+    createSale: builder.mutation<Sale, CreateSaleInput>({
+      query: (saleData) => ({
+        url: '',
+        method: 'POST',
+        body: saleData,
+      }),
+      invalidatesTags: [{ type: 'Sale', id: 'LIST' }],
+    }),
+    updateSale: builder.mutation<Sale, { id: number | string; data: UpdateSaleInput }>({
       query: ({ id, data }) => ({
-        url: `/${id}`,
+        url: `?id=${id}`,
         method: 'PUT',
         body: data,
       }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Sale', id }, { type: 'Sale', id: 'LIST' }],
     }),
-    deleteSale: builder.mutation<{ success: boolean }, string>({
+    updateSalePartial: builder.mutation<Sale, { id: number | string; data: Partial<UpdateSaleInput> }>({
+      query: ({ id, data }) => ({
+        url: `?id=${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Sale', id }, { type: 'Sale', id: 'LIST' }],
+    }),
+    deleteSale: builder.mutation<{ success: boolean; message: string }, number | string>({
       query: (id) => ({
         url: `?id=${id}`,
         method: 'DELETE',
@@ -73,5 +79,6 @@ export const {
   useGetSaleByIdQuery,
   useCreateSaleMutation,
   useUpdateSaleMutation,
+  useUpdateSalePartialMutation,
   useDeleteSaleMutation,
 } = salesApi;

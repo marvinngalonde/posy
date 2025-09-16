@@ -86,7 +86,7 @@ export default function CreatePurchase() {
       try {
         setIsLoading(true)
         const [suppliersRes, warehousesRes] = await Promise.all([
-          fetch('/api/suppliers'),
+          fetch('/api/v2/suppliers'),
           fetch('/api/settings/warehouses')
         ])
         
@@ -96,9 +96,9 @@ export default function CreatePurchase() {
         
         const suppliersData = await suppliersRes.json()
         const warehousesData = await warehousesRes.json()
-        
-        setSuppliers(suppliersData)
-        setWarehouses(warehousesData)
+
+        setSuppliers(suppliersData.data || suppliersData)
+        setWarehouses(warehousesData.data || warehousesData)
       } catch (error) {
         toast.error("Failed to load initial data")
         console.error(error)

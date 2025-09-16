@@ -25,6 +25,8 @@ import { transfersApi } from "./slices/transfersApi"
 import { hrmCatalogApi } from "./slices/hrmCatalogApi"
 import { hrmAttendanceApi } from "./slices/hrmAttendanceApi"
 import { invoicesApi } from "./slices/invoicesApi"
+import { organizationApi } from "./slices/organizationApi"
+import { settingsV2Api } from "./slices/settingsV2Api"
 import { authApi } from "./slices/authSlice"
 
 export const store = configureStore({
@@ -55,6 +57,8 @@ export const store = configureStore({
     [hrmCatalogApi.reducerPath]: hrmCatalogApi.reducer,
     [hrmAttendanceApi.reducerPath]: hrmAttendanceApi.reducer,
     [invoicesApi.reducerPath]: invoicesApi.reducer,
+    [organizationApi.reducerPath]: organizationApi.reducer,
+    [settingsV2Api.reducerPath]: settingsV2Api.reducer,
     [authApi.reducerPath]: authApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -76,6 +80,8 @@ export const store = configureStore({
       hrmCatalogApi.middleware,
       hrmAttendanceApi.middleware,
       invoicesApi.middleware,
+      organizationApi.middleware,
+      settingsV2Api.middleware,
       authApi.middleware
     ),
 })

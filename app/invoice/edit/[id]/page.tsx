@@ -230,11 +230,11 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
         created_by: invoiceData?.created_by || user_id || null,
         items: items.map(item => ({
           product_id: item.product_id,
-          quantity: Number(item.quantity.toFixed(2)),
-          unit_price: Number(item.unit_price.toFixed(2)),
-          discount: Number(item.discount.toFixed(2)),
-          tax: Number(item.tax.toFixed(2)),
-          subtotal: Number((item.unit_price * item.quantity - item.discount + item.tax).toFixed(2)),
+          quantity: Number(Number(item.quantity || 0).toFixed(2)),
+          unit_price: Number(Number(item.unit_price || 0).toFixed(2)),
+          discount: Number(Number(item.discount || 0).toFixed(2)),
+          tax: Number(Number(item.tax || 0).toFixed(2)),
+          subtotal: Number((Number(item.unit_price || 0) * Number(item.quantity || 0) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
         })),
       }
 
@@ -292,7 +292,7 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -305,7 +305,7 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map(w => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    <SelectItem key={w.id} value={w.id.toString()}>{w.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -399,7 +399,7 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
                       <tr key={item.id}>
                         <td className="p-3 border">{idx + 1}</td>
                         <td className="p-3 border">{item.name}</td>
-                        <td className="p-3 border">${Number(item.unit_price).toFixed(2)}</td>
+                        <td className="p-3 border">${Number(item.unit_price || 0).toFixed(2)}</td>
                         <td className="p-3 border">{item.stock}</td>
                         <td className="p-3 border">
                           <div className="flex items-center gap-1">
@@ -441,7 +441,7 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
                           />
                         </td>
                         <td className="p-3 border">
-                          ${((item.unit_price * item.quantity) - item.discount + item.tax).toFixed(2)}
+                          ${((Number(item.unit_price || 0) * Number(item.quantity || 0)) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)}
                         </td>
                         <td className="p-3 border">
                           <Button

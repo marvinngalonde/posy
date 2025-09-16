@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { generateDocumentPDF } from '@/lib/utils/pdf'
+import { useGetOrganizationQuery } from '@/lib/slices/organizationApi'
 import type React from "react"
 import { useGetInvoicesQuery, useDeleteInvoiceMutation, useGetInvoiceByIdQuery, useGetInvoiceItemsQuery } from "@/lib/slices/invoicesApi"
 import { Invoice, InvoiceItem } from "@/lib/types/invoice"
@@ -63,6 +65,7 @@ export default function InvoiceList() {
   const [deleteInvoice, { isLoading: isDeleting }] = useDeleteInvoiceMutation()
   const { data: fullInvoiceData } = useGetInvoiceByIdQuery(invoiceIdForActions || "", { skip: !invoiceIdForActions });
   const { data: invoiceItemsData } = useGetInvoiceItemsQuery(invoiceIdForActions || "", { skip: !invoiceIdForActions });
+  const { data: organization } = useGetOrganizationQuery();
   
   const invoices = (data?.data || []) as unknown as InvoiceListItem[];
   const pagination = data?.pagination;
@@ -137,107 +140,44 @@ export default function InvoiceList() {
  const exportSingleInvoiceToPDF = async (invoiceId: string) => {
   try {
     const invoiceResponse = await fetch(`/api/v2/invoices/${invoiceId}`);
-    const invoiceData: Invoice = await invoiceResponse.json();
+    const invoiceData = await invoiceResponse.json();
 
     const itemsResponse = await fetch(`/api/v2/invoices/items?invoice_id=${invoiceId}`);
-    const itemsData: InvoiceItem[] = await itemsResponse.json();
+    const itemsResult = await itemsResponse.json();
+    const itemsData = itemsResult.data || [];
 
-    const doc = new jsPDF();
-    let yPos = 15;
+    // Prepare data for PDF generation
+    const pdfConfig = {
+      title: 'Invoice',
+      documentNumber: invoiceData.reference || 'INV-001',
+      documentDate: new Date(invoiceData.date),
+      clientInfo: {
+        name: invoiceData.customer?.name || invoiceData.customer_name || 'Customer Name',
+        email: invoiceData.customer?.email || '',
+        phone: invoiceData.customer?.phone || '',
+        address: invoiceData.customer?.address || '',
+        city: invoiceData.customer?.city || '',
+        country: invoiceData.customer?.country || ''
+      },
+      items: itemsData.map((item: any) => ({
+        description: item.product?.name || item.product_name || item.name || 'Product',
+        quantity: Number(item.quantity || 0),
+        unitPrice: Number(item.price || item.unit_price || 0),
+        total: Number(item.subtotal || (item.quantity * item.price) || 0)
+      })),
+      totals: {
+        subtotal: Number(invoiceData.subtotal || 0),
+        tax: Number(invoiceData.tax_amount || 0),
+        discount: Number(invoiceData.discount || 0),
+        total: Number(invoiceData.total || 0)
+      },
+      notes: invoiceData.notes || (organization?.invoice_footer || 'Thank you for your business!'),
+      dueDate: invoiceData.due_date ? new Date(invoiceData.due_date) : undefined,
+      status: invoiceData.status || 'Pending'
+    };
 
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(33, 33, 33); // Dark gray
-    doc.text("INVOICE", 14, yPos);
-    yPos += 10;
-
-    doc.setFontSize(10);
-    doc.setTextColor(77, 77, 77); // Medium gray
-    doc.text(`Reference: ${invoiceData.reference}`, 14, yPos);
-    yPos += 5;
-    doc.text(`Date: ${new Date(invoiceData.date).toLocaleDateString()}`, 14, yPos);
-    yPos += 10;
-
-    // Invoice Details
-    doc.setFontSize(12);
-    doc.setTextColor(33, 33, 33);
-    doc.text("Invoice Details:", 14, yPos);
-    yPos += 7;
-
-    doc.setFontSize(10);
-    doc.setTextColor(77, 77, 77);
-    doc.text(`Customer: ${invoiceData.customer_name || 'N/A'}`, 14, yPos);
-    doc.text(`Warehouse: ${invoiceData.warehouse_name || 'N/A'}`, 120, yPos); // Align right
-    yPos += 5;
-    doc.text(`Status: ${invoiceData.status}`, 14, yPos);
-    doc.text(`Payment Status: ${invoiceData.payment_status}`, 120, yPos); // Align right
-    yPos += 5;
-    doc.text(`Created By: ${invoiceData.created_by || 'N/A'}`, 14, yPos);
-    yPos += 10;
-
-    // Items Table
-    const tableResult = autoTable(doc, {
-      startY: yPos,
-      head: [['Product', 'Code', 'Qty', 'Unit Price', 'Discount', 'Tax', 'Subtotal']],
-      body: itemsData.map(item => [
-        item.name,
-        item.code,
-        item.quantity,
-        `$${Number(item.unit_price).toFixed(2)}`,
-        `$${Number(item.discount).toFixed(2)}`,
-        `$${Number(item.tax).toFixed(2)}`,
-        `$${Number(item.subtotal).toFixed(2)}`,
-      ]),
-      styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-      headStyles: { fillColor: [26, 35, 126], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      didDrawPage: (data) => {
-        // Footer
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150); // Light gray
-        doc.text(`Page ${data.pageNumber} of ${data.pageCount}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
-      }
-    });
-
-    // Summary - Get the final Y position from the table result
-    yPos = (doc as any).lastAutoTable.finalY + 10;
-
-    doc.setFontSize(12);
-    doc.setTextColor(33, 33, 33);
-    doc.text("Summary:", 14, yPos);
-    yPos += 7;
-
-    doc.setFontSize(10);
-    doc.setTextColor(77, 77, 77);
-    doc.text(`Subtotal:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.subtotal).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 5;
-    doc.text(`Tax Amount:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.tax_amount).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 5;
-    doc.text(`Discount:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.discount).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 5;
-    doc.text(`Shipping:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.shipping).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 7;
-    doc.setFontSize(14);
-    doc.setTextColor(33, 33, 33);
-    doc.text(`TOTAL:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.total).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 5;
-    doc.text(`PAID:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.paid).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 5;
-    doc.text(`DUE:`, 14, yPos);
-    doc.text(`$${Number(invoiceData.due).toFixed(2)}`, 190, yPos, { align: 'right' });
-    yPos += 10;
-
-    doc.setFontSize(10);
-    doc.setTextColor(77, 77, 77);
-    doc.text(`Notes: ${invoiceData.notes || 'N/A'}`, 14, yPos);
-
-    doc.save(`invoice-${invoiceData.reference}.pdf`);
+    const doc = generateDocumentPDF(pdfConfig, organization);
+    doc.save(`invoice-${pdfConfig.documentNumber}.pdf`);
     toast.success("Invoice PDF generated successfully!");
   } catch (error) {
     console.error("Error generating invoice PDF:", error);

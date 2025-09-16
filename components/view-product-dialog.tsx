@@ -45,11 +45,11 @@ export function ViewProductDialog({
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Category</TableCell>
-                  <TableCell>{product.category_name || product.category_id}</TableCell>
+                  <TableCell>{product.categories?.name || product.category_name || product.category_id}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Brand</TableCell>
-                  <TableCell>{product.brand_name || product.brand_id}</TableCell>
+                  <TableCell>{product.brands?.name || product.brand_name || product.brand_id}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Price</TableCell>

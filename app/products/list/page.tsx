@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useGetProductsQuery, useDeleteProductMutation } from '@/lib/slices/productsApi'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type React from "react"
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -98,10 +99,10 @@ export default function ProductList() {
     const tableData = products.map(product => [
       product.name || '',
       product.code || '',
-      product.category_name || '',
-      product.brand_name || '',
+      product.categories?.name || product.category_name || '',
+      product.brands?.name || product.brand_name || '',
       Number(product.price),
-      product.unit_name || '',
+      product.units?.name || product.unit_name || '',
       Number(product.stock ?? 0)
     ])
     
@@ -121,10 +122,10 @@ export default function ProductList() {
       products.map(product => ({
         Name: product.name,
         Code: product.code,
-        Category: product.category_name,
-        Brand: product.brand_name,
+        Category: product.categories?.name || product.category_name || '',
+        Brand: product.brands?.name || product.brand_name || '',
         Price: Number(product.price),
-        Unit: product.unit_name,
+        Unit: product.units?.name || product.unit_name || '',
         Quantity: Number(product.stock ?? 0)
       }))
     )
@@ -240,10 +241,10 @@ export default function ProductList() {
                           </TableCell>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell>{product.code}</TableCell>
-                          <TableCell>{product.category_name}</TableCell>
-                          <TableCell>{product.brand_name}</TableCell>
+                          <TableCell>{product.categories?.name || product.category_name || ''}</TableCell>
+                          <TableCell>{product.brands?.name || product.brand_name || ''}</TableCell>
                           <TableCell>{Number(product.price) }</TableCell>
-                          <TableCell>{product.unit_name}</TableCell>
+                          <TableCell>{product.units?.name || product.unit_name || ''}</TableCell>
                           <TableCell>{Number(product.stock ?? 0)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">

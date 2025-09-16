@@ -95,10 +95,15 @@ export default function CreateProduct() {
           warehousesRes.json(),
         ])
 
-        setCategories(categoriesData.map((c: any) => ({ value: c.id, label: c.name })))
-        setBrands(brandsData.map((b: any) => ({ value: b.id, label: b.name })))
-        setUnits(unitsData.map((u: any) => ({ value: u.id, label: u.name })))
-        setWarehouses(warehousesData.map((w: any) => ({ value: w.id, label: w.name })))
+        const categoriesList = categoriesData.data || categoriesData
+        const brandsList = brandsData.data || brandsData
+        const unitsList = unitsData.data || unitsData
+        const warehousesList = warehousesData.data || warehousesData
+
+        setCategories(categoriesList.map((c: any) => ({ value: c.id.toString(), label: c.name })))
+        setBrands(brandsList.map((b: any) => ({ value: b.id.toString(), label: b.name })))
+        setUnits(unitsList.map((u: any) => ({ value: u.id.toString(), label: u.name })))
+        setWarehouses(warehousesList.map((w: any) => ({ value: w.id.toString(), label: w.name })))
       } catch (error) {
         console.error("Error loading data:", error)
         toast.error("Failed to load form data")

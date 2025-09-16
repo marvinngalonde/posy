@@ -1,32 +1,30 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-
-export interface Supplier {
-  id: string
-  name: string
-  email: string
-  phone: string
-  country: string
-  city: string
-  address: string
-}
-
-export interface PaginatedSuppliersResponse {
-    data: Supplier[];
-    pagination: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    };
-}
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type {
+  Supplier,
+  CreateSupplierInput,
+  UpdateSupplierInput,
+  PaginatedResponse,
+  SupplierSearchParams
+} from '@/lib/types/prisma';
 
 export const suppliersApi = createApi({
-  reducerPath: "suppliersApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "/api/suppliers" }),
-  tagTypes: ["Supplier"],
+  reducerPath: 'suppliersApi',
+  baseQuery: fetchBaseQuery({ baseUrl: '/api/v2/suppliers' }),
+  tagTypes: ['Supplier'],
   endpoints: (builder) => ({
-    getSuppliers: builder.query<PaginatedSuppliersResponse, { page: number; limit: number; search: string }>({
-        query: ({ page, limit, search }) => `?page=${page}&limit=${limit}&search=${search}`,
+    getSuppliers: builder.query<PaginatedResponse<Supplier>, SupplierSearchParams>({
+        query: (params) => {
+          const searchParams = new URLSearchParams()
+          if (params.page) searchParams.append('page', params.page.toString())
+          if (params.limit) searchParams.append('limit', params.limit.toString())
+          if (params.search) searchParams.append('search', params.search)
+          if (params.name) searchParams.append('name', params.name)
+          if (params.email) searchParams.append('email', params.email)
+          if (params.phone) searchParams.append('phone', params.phone)
+          if (params.sortBy) searchParams.append('sortBy', params.sortBy)
+          if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+          return `?${searchParams.toString()}`
+        },
         providesTags: (result) =>
             result
                 ? [
@@ -35,30 +33,49 @@ export const suppliersApi = createApi({
                 ]
                 : [{ type: 'Supplier', id: 'LIST' }],
     }),
-    createSupplier: builder.mutation<Supplier, Partial<Supplier>>({
-        query: (supplier) => ({
-          url: ``,
-          method: 'POST',
-          body: supplier,
-        }),
-        invalidatesTags: ['Supplier'],
+    getSupplierById: builder.query<Supplier, number | string>({
+      query: (id) => `?id=${id}`,
+      providesTags: (result, error, id) => [{ type: 'Supplier', id }],
+    }),
+    createSupplier: builder.mutation<Supplier, CreateSupplierInput>({
+      query: (supplierData) => ({
+        url: '',
+        method: 'POST',
+        body: supplierData,
       }),
-    updateSupplier: builder.mutation<Supplier, Partial<Supplier> & { id: string }>({
-        query: ({ id, ...patch }) => ({
-          url: ``,
-          method: 'PUT',
-          body: { id, ...patch },
-        }),
-        invalidatesTags: ['Supplier'],
+      invalidatesTags: [{ type: 'Supplier', id: 'LIST' }],
+    }),
+    updateSupplier: builder.mutation<Supplier, { id: number | string; data: UpdateSupplierInput }>({
+      query: ({ id, data }) => ({
+        url: `?id=${id}`,
+        method: 'PUT',
+        body: data,
       }),
-      deleteSupplier: builder.mutation<{ success: boolean; id: string }, string>({
-        query: (id) => ({
-          url: `?id=${id}`,
-          method: 'DELETE',
-        }),
-        invalidatesTags: ['Supplier'],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Supplier', id }, { type: 'Supplier', id: 'LIST' }],
+    }),
+    updateSupplierPartial: builder.mutation<Supplier, { id: number | string; data: Partial<UpdateSupplierInput> }>({
+      query: ({ id, data }) => ({
+        url: `?id=${id}`,
+        method: 'PATCH',
+        body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Supplier', id }, { type: 'Supplier', id: 'LIST' }],
+    }),
+    deleteSupplier: builder.mutation<{ success: boolean; message: string }, number | string>({
+      query: (id) => ({
+        url: `?id=${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, id) => [{ type: 'Supplier', id }, { type: 'Supplier', id: 'LIST' }],
+    }),
   }),
-})
+});
 
-export const { useGetSuppliersQuery, useCreateSupplierMutation, useUpdateSupplierMutation, useDeleteSupplierMutation } = suppliersApi
+export const {
+  useGetSuppliersQuery,
+  useGetSupplierByIdQuery,
+  useCreateSupplierMutation,
+  useUpdateSupplierMutation,
+  useUpdateSupplierPartialMutation,
+  useDeleteSupplierMutation,
+} = suppliersApi;

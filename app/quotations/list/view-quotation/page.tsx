@@ -52,11 +52,11 @@ export function ViewQuotationDialog({ quotation, open, onOpenChange }: ViewQuota
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Customer</p>
-              <p className="font-medium">{quotation.customer_name || 'Unknown'}</p>
+              <p className="font-medium">{fullQuotation?.customers?.name || quotation.customers?.name || quotation.customer_name || 'Unknown'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Warehouse</p>
-              <p className="font-medium">{quotation.warehouse_name || 'Unknon'}</p>
+              <p className="font-medium">{fullQuotation?.warehouses?.name || quotation.warehouses?.name || quotation.warehouse_name || 'Unknown'}</p>
             </div>
           </div>
 
@@ -135,8 +135,8 @@ export function ViewQuotationDialog({ quotation, open, onOpenChange }: ViewQuota
                     items.map((it: any, idx: number) => (
                       <tr key={it.id} className="border-b">
                         <td className="p-3">{idx + 1}</td>
-                        <td className="p-3">{it.product_name || it.name || 'N/A'}</td>
-                        <td className="p-3">{it.product_code || it.code || 'N/A'}</td>
+                        <td className="p-3">{it.products?.name || it.product?.name || it.product_name || it.name || 'N/A'}</td>
+                        <td className="p-3">{it.products?.code || it.product?.code || it.product_code || it.code || 'N/A'}</td>
                         <td className="p-3">{it.quantity || 0}</td>
                         <td className="p-3">${Number(it.price ?? it.unit_price ?? 0).toFixed(2)}</td>
                         <td className="p-3">${Number(it.discount || 0).toFixed(2)}</td>

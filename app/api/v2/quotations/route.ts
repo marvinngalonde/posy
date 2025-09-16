@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
+import type {
+  Quotation,
+  CreateQuotationInput,
+  UpdateQuotationInput,
+  PaginatedResponse,
+  ApiResponse,
+  QuotationSearchParams
+} from "@/lib/types/prisma"
 
-const prisma = new PrismaClient()
-
-// GET - Read quotations (list with pagination or single by ID)
-export async function GET(req: NextRequest) {
+/**
+ * GET - Retrieve quotations with pagination and search
+ * Supports both list view and single quotation retrieval by ID
+ */
+export async function GET(req: NextRequest): Promise<NextResponse<Quotation | PaginatedResponse<Quotation> | ApiResponse>> {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -16,11 +25,11 @@ export async function GET(req: NextRequest) {
     // Get single quotation by ID
     if (id) {
       const quotation = await prisma.quotations.findUnique({
-        where: { id },
+        where: { id: parseInt(id) },
         include: {
-          customer: { select: { name: true } },
-          warehouse: { select: { name: true } },
-          items: true,
+          customers: { select: { name: true } },
+          warehouses: { select: { name: true } },
+          quotation_items: true,
         },
       })
       
@@ -39,7 +48,7 @@ export async function GET(req: NextRequest) {
       ? {
           OR: [
             { reference: { contains: search, mode: 'insensitive' as const } },
-            { customer: { name: { contains: search, mode: 'insensitive' as const } } },
+            { customers: { name: { contains: search, mode: 'insensitive' as const } } },
           ],
         }
       : {}
@@ -50,10 +59,10 @@ export async function GET(req: NextRequest) {
         skip: offset,
         take: limit,
         include: {
-          customer: { select: { name: true } },
-          warehouse: { select: { name: true } },
+          customers: { select: { name: true } },
+          warehouses: { select: { name: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
       }),
       prisma.quotations.count({ where }),
     ])
@@ -76,24 +85,27 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create new quotation
-export async function POST(req: NextRequest) {
+/**
+ * POST - Create a new quotation with items
+ * Validates required fields and creates quotation with associated items
+ */
+export async function POST(req: NextRequest): Promise<NextResponse<Quotation | ApiResponse>> {
   try {
     const body = await req.json()
-    const { 
-      reference, 
-      customerId, 
-      warehouseId, 
-      validUntil,
+    const {
+      reference,
+      customer_id,
+      warehouse_id,
+      valid_until,
       notes,
       subtotal,
-      taxAmount,
+      tax_amount,
       total,
       items = []
     } = body
 
     // Validation
-    if (!reference || !customerId || !warehouseId) {
+    if (!reference || !customer_id || !warehouse_id) {
       return NextResponse.json(
         { error: "Reference, customer ID, and warehouse ID are required" },
         { status: 400 }
@@ -116,20 +128,21 @@ export async function POST(req: NextRequest) {
     const quotation = await prisma.quotations.create({
       data: {
         reference,
-        customerId,
-        warehouseId,
-        validUntil: validUntil ? new Date(validUntil) : null,
+        customer_id,
+        warehouse_id,
+        date: new Date(),
+        valid_until: valid_until ? new Date(valid_until) : null,
         notes,
         subtotal: subtotal || 0,
-        taxAmount: taxAmount || 0,
+        tax_amount: tax_amount || 0,
         total: total || 0,
+        created_by: 1, // TODO: Get from auth
         items: {
           create: items.map((item: any) => ({
-            productId: item.productId,
+            product_id: item.product_id,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.total,
-            description: item.description,
+            unit_price: item.unit_price,
+            subtotal: item.subtotal,
           }))
         }
       },
@@ -150,8 +163,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT - Update existing quotation
-export async function PUT(req: NextRequest) {
+/**
+ * PUT - Update an existing quotation
+ * Replaces all quotation data and associated items
+ */
+export async function PUT(req: NextRequest): Promise<NextResponse<Quotation | ApiResponse>> {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -164,21 +180,21 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { 
-      reference, 
-      customerId, 
-      warehouseId, 
-      validUntil,
+    const {
+      reference,
+      customer_id,
+      warehouse_id,
+      valid_until,
       notes,
       subtotal,
-      taxAmount,
+      tax_amount,
       total,
       items = []
     } = body
 
     // Check if quotation exists
     const existingQuotation = await prisma.quotations.findUnique({
-      where: { id }
+      where: { id: parseInt(id) }
     })
 
     if (!existingQuotation) {
@@ -205,30 +221,29 @@ export async function PUT(req: NextRequest) {
     // Update quotation (delete existing items and create new ones)
     const updatedQuotation = await prisma.$transaction(async (tx) => {
       // Delete existing items
-      await tx.quotationItems.deleteMany({
-        where: { quotationId: id }
+      await tx.quotation_items.deleteMany({
+        where: { quotation_id: parseInt(id) }
       })
 
       // Update quotation with new data and items
       return tx.quotations.update({
-        where: { id },
+        where: { id: parseInt(id) },
         data: {
           reference: reference || existingQuotation.reference,
-          customerId: customerId || existingQuotation.customerId,
-          warehouseId: warehouseId || existingQuotation.warehouseId,
-          validUntil: validUntil ? new Date(validUntil) : existingQuotation.validUntil,
+          customer_id: customer_id || existingQuotation.customer_id,
+          warehouse_id: warehouse_id || existingQuotation.warehouse_id,
+          valid_until: valid_until ? new Date(valid_until) : existingQuotation.valid_until,
           notes: notes !== undefined ? notes : existingQuotation.notes,
           subtotal: subtotal !== undefined ? subtotal : existingQuotation.subtotal,
-          taxAmount: taxAmount !== undefined ? taxAmount : existingQuotation.taxAmount,
+          tax_amount: tax_amount !== undefined ? tax_amount : existingQuotation.tax_amount,
           total: total !== undefined ? total : existingQuotation.total,
-          updatedAt: new Date(),
+          updated_at: new Date(),
           items: {
             create: items.map((item: any) => ({
-              productId: item.productId,
+              product_id: item.product_id,
               quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: item.total,
-              description: item.description,
+              unit_price: item.unit_price,
+              subtotal: item.subtotal,
             }))
           }
         },
@@ -250,8 +265,11 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE - Delete quotation
-export async function DELETE(req: NextRequest) {
+/**
+ * DELETE - Remove a quotation and all associated items
+ * Uses cascade delete to handle quotation items
+ */
+export async function DELETE(req: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -265,7 +283,7 @@ export async function DELETE(req: NextRequest) {
 
     // Check if quotation exists
     const existingQuotation = await prisma.quotations.findUnique({
-      where: { id }
+      where: { id: parseInt(id) }
     })
 
     if (!existingQuotation) {
@@ -277,7 +295,7 @@ export async function DELETE(req: NextRequest) {
 
     // Delete quotation (cascade delete will handle items)
     await prisma.quotations.delete({
-      where: { id }
+      where: { id: parseInt(id) }
     })
 
     return NextResponse.json(
@@ -293,8 +311,11 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PATCH - Partial update (for status changes, etc.)
-export async function PATCH(req: NextRequest) {
+/**
+ * PATCH - Partial update of quotation fields
+ * Useful for status changes and individual field updates
+ */
+export async function PATCH(req: NextRequest): Promise<NextResponse<Quotation | ApiResponse>> {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -310,7 +331,7 @@ export async function PATCH(req: NextRequest) {
 
     // Check if quotation exists
     const existingQuotation = await prisma.quotations.findUnique({
-      where: { id }
+      where: { id: parseInt(id) }
     })
 
     if (!existingQuotation) {
@@ -322,7 +343,7 @@ export async function PATCH(req: NextRequest) {
 
     // Update only provided fields
     const updatedQuotation = await prisma.quotations.update({
-      where: { id },
+      where: { id: parseInt(id) },
       data: {
         ...body,
         updatedAt: new Date(),

@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect, useMemo } from "react"
 import DashboardLayout from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -9,13 +11,14 @@ import { Search, Plus, Minus, X } from "lucide-react"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { v4 as uuidv4 } from "uuid"
 
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetWarehousesQuery } from "@/lib/slices/settingsApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
 import { useCreateInvoiceMutation } from "@/lib/slices/invoicesApi"
 
-import { InvoiceItem } from "@/lib/types/invoice"
+import { InvoiceItem } from "@/lib/types/prisma"
 
 interface Product {
   id: string
@@ -45,7 +48,8 @@ export default function CreateInvoice() {
   const [customerId, setCustomerId] = useState("")
   const [warehouseId, setWarehouseId] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [items, setItems] = useState<InvoiceItem[]>([])
+  const [searchResults, setSearchResults] = useState<Product[]>([])
+  const [items, setItems] = useState<(InvoiceItem & { name: string; code: string; stock: number })[]>([])
   const [status, setStatus] = useState("pending")
   const [paymentStatus, setPaymentStatus] = useState("unpaid")
   const [note, setNote] = useState("")
@@ -89,10 +93,10 @@ export default function CreateInvoice() {
     if (!customersLoading && !warehousesLoading) {
       setLoading(false)
       if (customers.length > 0 && !customerId) {
-        setCustomerId(customers[0].id)
+        setCustomerId(customers[0].id.toString())
       }
       if (warehouses.length > 0 && !warehouseId) {
-        setWarehouseId(warehouses[0].id)
+        setWarehouseId(warehouses[0].id.toString())
       }
     }
   }, [customersLoading, warehousesLoading, customers, warehouses, customerId, warehouseId])
@@ -103,32 +107,34 @@ export default function CreateInvoice() {
       return
     }
     setIsSearching(true)
-    setSearchResults(searchProductsData.filter(product => 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const filtered = searchProductsData.filter(product =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.code.toLowerCase().includes(searchQuery.toLowerCase())
-    ))
+    )
+    setSearchResults(filtered)
     setIsSearching(false)
-    if (searchResults.length === 0) {
+    if (filtered.length === 0) {
       toast.info("No products found matching your search")
     }
   }
 
   const addProduct = (product: Product) => {
     setItems(prev => {
-      const existingItem = prev.find(item => item.product_id === product.id);
-      if (existingItem) {
-        return prev.map(item => 
-          item.product_id === product.id 
-            ? { ...item, quantity: item.quantity + 1 } 
+      const existingItemIndex = prev.findIndex(item => item.product_id === parseInt(product.id));
+      if (existingItemIndex !== -1) {
+        return prev.map((item, index) =>
+          index === existingItemIndex
+            ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       } else {
         return [
           ...prev,
           {
-            id: uuidv4(), // Generate a new UUID for the invoice item
-            invoice_id: "", // This will be filled on submission
-            product_id: product.id,
+            id: 0, // This will be assigned by the database
+            invoice_id: 0, // This will be filled on submission
+            product_id: parseInt(product.id),
+            product: { name: product.name, code: product.code },
             name: product.name,
             code: product.code,
             unit_price: product.price,
@@ -137,6 +143,7 @@ export default function CreateInvoice() {
             discount: 0,
             tax: 0,
             subtotal: product.price,
+            created_at: null,
           },
         ];
       }
@@ -145,17 +152,17 @@ export default function CreateInvoice() {
     setSearchResults([]);
   };
 
-  const updateItem = (itemId: string, field: string, value: number | string) => {
+  const updateItem = (itemIndex: number, field: string, value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
     setItems(prev =>
-      prev.map(item =>
-        item.id === itemId ? { ...item, [field]: numValue } : item
+      prev.map((item, index) =>
+        index === itemIndex ? { ...item, [field]: numValue } : item
       )
     );
   };
 
-  const removeItem = (itemId: string) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
+  const removeItem = (itemIndex: number) => {
+    setItems(prev => prev.filter((_, index) => index !== itemIndex));
   };
 
   const handleSubmit = async () => {
@@ -187,11 +194,11 @@ export default function CreateInvoice() {
         created_by: user_id || null,
         items: items.map(item => ({
           product_id: item.product_id,
-          quantity: Number(item.quantity.toFixed(2)),
-          unit_price: Number(item.unit_price.toFixed(2)),
-          discount: Number(item.discount.toFixed(2)),
-          tax: Number(item.tax.toFixed(2)),
-          subtotal: Number((item.unit_price * item.quantity - item.discount + item.tax).toFixed(2)),
+          quantity: Number(Number(item.quantity || 0).toFixed(2)),
+          unit_price: Number(Number(item.unit_price || 0).toFixed(2)),
+          discount: Number(Number(item.discount || 0).toFixed(2)),
+          tax: Number(Number(item.tax || 0).toFixed(2)),
+          subtotal: Number((Number(item.unit_price || 0) * Number(item.quantity || 0) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
         })),
       };
 
@@ -247,7 +254,7 @@ export default function CreateInvoice() {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -260,7 +267,7 @@ export default function CreateInvoice() {
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map(w => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    <SelectItem key={w.id} value={w.id.toString()}>{w.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -298,9 +305,9 @@ export default function CreateInvoice() {
                   )}
                 </div>
 
-                {searchProductsData.length > 0 && searchQuery.trim() !== "" && ( // Only show results if there's a query and results
+                {searchResults.length > 0 && searchQuery.trim() !== "" && ( // Only show results if there's a query and results
                   <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border">
-                    {searchProductsData.map((product) => (
+                    {searchResults.map((product) => (
                       <div
                         key={product.id}
                         className="p-2 hover:bg-gray-50 cursor-pointer border-b"
@@ -351,10 +358,10 @@ export default function CreateInvoice() {
                     </tr>
                   ) : (
                     items.map((item, idx) => (
-                      <tr key={item.id}>
+                      <tr key={`item-${idx}`}>
                         <td className="p-3 border">{idx + 1}</td>
                         <td className="p-3 border">{item.name}</td>
-                        <td className="p-3 border">${Number(item.unit_price).toFixed(2)}</td>
+                        <td className="p-3 border">${Number(item.unit_price || 0).toFixed(2)}</td>
                         <td className="p-3 border">{item.stock}</td>
                         <td className="p-3 border">
                           <div className="flex items-center gap-1">
@@ -362,7 +369,7 @@ export default function CreateInvoice() {
                               size="sm"
                               variant="outline"
                               className="h-6 w-6 p-0"
-                              onClick={() => updateItem(item.id, "quantity", Math.max(1, item.quantity - 1))}
+                              onClick={() => updateItem(idx, "quantity", Math.max(1, item.quantity - 1))}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -371,7 +378,7 @@ export default function CreateInvoice() {
                               size="sm"
                               variant="outline"
                               className="h-6 w-6 p-0"
-                              onClick={() => updateItem(item.id, "quantity", item.quantity + 1)}
+                              onClick={() => updateItem(idx, "quantity", item.quantity + 1)}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -382,7 +389,7 @@ export default function CreateInvoice() {
                             type="number"
                             min={0}
                             value={item.discount}
-                            onChange={e => updateItem(item.id, "discount", Number(e.target.value))}
+                            onChange={e => updateItem(idx, "discount", Number(e.target.value))}
                             className="w-20"
                           />
                         </td>
@@ -391,19 +398,19 @@ export default function CreateInvoice() {
                             type="number"
                             min={0}
                             value={item.tax}
-                            onChange={e => updateItem(item.id, "tax", Number(e.target.value))}
+                            onChange={e => updateItem(idx, "tax", Number(e.target.value))}
                             className="w-20"
                           />
                         </td>
                         <td className="p-3 border">
-                          ${((item.unit_price * item.quantity) - item.discount + item.tax).toFixed(2)}
+                          ${((Number(item.unit_price || 0) * Number(item.quantity || 0)) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)}
                         </td>
                         <td className="p-3 border">
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-red-500"
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => removeItem(idx)}
                           >
                             <X className="h-4 w-4" />
                           </Button>
