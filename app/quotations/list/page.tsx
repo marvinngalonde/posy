@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
-import { Search, Filter, FileDown, Edit, Trash2, ChevronLeft, ChevronRight, MoreHorizontal, Eye, FileText } from "lucide-react"
-import { useMemo, useState } from "react"
+import { Search, FileDown, Edit, Trash2, ChevronLeft, ChevronRight, MoreHorizontal, Eye, FileText } from "lucide-react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
