@@ -92,12 +92,12 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
       setDate(invoiceData.date || new Date().toISOString().split('T')[0])
       setCustomerId(invoiceData.customer_id || (customers.length > 0 ? customers[0].id : ""))
       setWarehouseId(invoiceData.warehouse_id || (warehouses.length > 0 ? warehouses[0].id : ""))
-      setOrderTax(invoiceData.tax_rate ?? 0)
-      setDiscount(invoiceData.discount ?? 0)
-      setShipping(invoiceData.shipping ?? 0)
+      setOrderTax(Number(invoiceData.tax_rate) || 0)
+      setDiscount(Number(invoiceData.discount) || 0)
+      setShipping(Number(invoiceData.shipping) || 0)
       setStatus(invoiceData.status || "pending")
       setPaymentStatus(invoiceData.payment_status || "unpaid")
-      setPaidAmount(invoiceData.paid ?? 0)
+      setPaidAmount(Number(invoiceData.paid) || 0)
       setNote(invoiceData.notes || "")
       setLoading(false)
     } else if (id && !isInvoiceLoading && customersLoading && warehousesLoading) {
@@ -218,14 +218,14 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
         date,
         customer_id: customerId,
         warehouse_id: warehouseId,
-        subtotal: Number(subtotal.toFixed(2)),
-        tax_rate: Number(orderTax.toFixed(2)),
-        tax_amount: Number(taxAmount.toFixed(2)),
-        discount: Number(discount.toFixed(2)),
-        shipping: Number(shipping.toFixed(2)),
-        total: Number(grandTotal.toFixed(2)),
-        paid: Number(paidAmount.toFixed(2)),
-        due: Number(dueAmount.toFixed(2)),
+        subtotal: Number(Number(subtotal || 0).toFixed(2)),
+        tax_rate: Number(Number(orderTax || 0).toFixed(2)),
+        tax_amount: Number(Number(taxAmount || 0).toFixed(2)),
+        discount: Number(Number(discount || 0).toFixed(2)),
+        shipping: Number(Number(shipping || 0).toFixed(2)),
+        total: Number(Number(grandTotal || 0).toFixed(2)),
+        paid: Number(Number(paidAmount || 0).toFixed(2)),
+        due: Number(Number(dueAmount || 0).toFixed(2)),
         status,
         payment_status: paymentStatus,
         notes: note || null,
@@ -552,33 +552,33 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>${Number(subtotal || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Order Tax</span>
                     <span>
-                      ${taxAmount.toFixed(2)} ({orderTax} %)
+                      ${Number(taxAmount || 0).toFixed(2)} ({Number(orderTax || 0)} %)
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Discount</span>
-                    <span>${discount.toFixed(2)}</span>
+                    <span>${Number(discount || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>${shipping.toFixed(2)}</span>
+                    <span>${Number(shipping || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Paid Amount</span>
-                    <span>${paidAmount.toFixed(2)}</span>
+                    <span>${Number(paidAmount || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Due Amount</span>
-                    <span>${dueAmount.toFixed(2)}</span>
+                    <span>${Number(dueAmount || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Grand Total</span>
-                    <span>${grandTotal.toFixed(2)}</span>
+                    <span>${Number(grandTotal || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

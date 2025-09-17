@@ -249,12 +249,29 @@ export default function ExpenseCategoryPage() {
       
       {selectedCategory && isViewDialogOpen && (
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Category Details</DialogTitle>
                 </DialogHeader>
-                <p>Name: {selectedCategory.name}</p>
-                <p>Description: {selectedCategory.description}</p>
+                <div className="space-y-4 overflow-y-auto flex-1">
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="font-medium">{selectedCategory.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Description</p>
+                    <p className="font-medium">{selectedCategory.description || 'No description'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Status</p>
+                    <p className="font-medium">{selectedCategory.status || 'Active'}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-4 border-t bg-white">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                </div>
             </DialogContent>
         </Dialog>
       )}

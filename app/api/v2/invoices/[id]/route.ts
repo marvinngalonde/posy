@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getConnection } from "@/lib/mysql";
 import type { FieldPacket, RowDataPacket } from "mysql2";
 import { Invoice, InvoiceItem } from "@/lib/types/invoice";
-import { v4 as uuidv4 } from "uuid";
 
 // READ ONE (GET by id)
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) return NextResponse.json({ error: "Missing invoice ID" }, { status: 400 });
 
   const pool = getConnection();
@@ -40,14 +39,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // UPDATE (PUT)
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const body: Partial<Invoice> = await req.json();
   const pool = getConnection();
   let conn: any;
 
   try {
     conn = await pool.getConnection();
+
+    // Validate enum values
+    const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+    const validPaymentStatuses = ['unpaid', 'partial', 'paid'];
+
+    const status = body.status && validStatuses.includes(body.status) ? body.status : 'draft';
+    const paymentStatus = body.payment_status && validPaymentStatuses.includes(body.payment_status) ? body.payment_status : 'unpaid';
+
     await conn.execute(
       `UPDATE invoices SET 
         reference=?, date=?, customer_id=?, warehouse_id=?, subtotal=?, 
@@ -67,8 +74,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         body.total,
         body.paid ?? 0,
         body.due ?? 0,
-        body.status,
-        body.payment_status,
+        status,
+        paymentStatus,
         body.notes ?? null,
         id,
       ]
@@ -83,10 +90,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       for (const item of body.items) {
         await conn.execute(
           `INSERT INTO invoice_items (
-            id, invoice_id, product_id, quantity, unit_price, discount, tax, subtotal
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            invoice_id, product_id, quantity, unit_price, discount, tax, subtotal
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
-            uuidv4(),
             id,
             item.product_id,
             item.quantity ?? 0,
@@ -110,8 +116,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) return NextResponse.json({ error: "Missing invoice ID" }, { status: 400 });
 
   const pool = getConnection();

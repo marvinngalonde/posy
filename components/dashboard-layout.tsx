@@ -111,7 +111,7 @@ const menuItems = [
     icon: DollarSign,
     roles: ['admin'],
     submenu: [
-      { label: "Create Expense", href: "/expenses/create" },
+   
       { label: "Expense List", href: "/expenses/list" },
       { label: "Expense Category", href: "/expenses/category" },
     ],

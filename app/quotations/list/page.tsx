@@ -27,7 +27,6 @@ import { Quotation, QuotationItem } from "@/lib/types/quotation"
 import { toast } from "sonner"
 import { useCreateInvoiceMutation } from "@/lib/slices/invoicesApi"
 import { Invoice, InvoiceItem as InvoiceItemType } from "@/lib/types/invoice"
-import { v4 as uuidv4 } from "uuid"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -228,22 +227,20 @@ export default function QuotationList() {
           shipping: Number(Number(fetchedFullQuotation.shipping || 0).toFixed(2)),
           total: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
           paid: 0, 
-          due: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)), 
-          status: "pending", 
+          due: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
+          status: "draft",
           payment_status: "unpaid", 
           notes: fetchedFullQuotation.notes || null,
           created_by: fetchedFullQuotation.created_by || user_id || null,
           items: fetchedQuotationItems.map(item => ({
-            id: uuidv4(),
-            invoice_id: "",
             product_id: item.product_id,
             name: item.product_name || item.name || 'N/A',
             code: item.product_code || item.code || 'N/A',
             quantity: Number(Number(item.quantity || 0).toFixed(2)),
-            unit_price: Number(item.price.toFixed(2)),
-            discount: Number(item.discount.toFixed(2)),
-            tax: Number(item.tax.toFixed(2)),
-            subtotal: Number((item.price * item.quantity - item.discount + item.tax).toFixed(2)),
+            unit_price: Number(Number(item.price || item.unit_price || 0).toFixed(2)),
+            discount: Number(Number(item.discount || 0).toFixed(2)),
+            tax: Number(Number(item.tax || 0).toFixed(2)),
+            subtotal: Number(((Number(item.price || item.unit_price || 0) * Number(item.quantity || 0)) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
 
             
           })),
@@ -274,21 +271,19 @@ export default function QuotationList() {
           total: Number(Number(fullQuotationData.total || 0).toFixed(2)),
           paid: 0, 
           due: Number(Number(fullQuotationData.total || 0).toFixed(2)), 
-          status: "pending", 
-          payment_status: "unpaid", 
+          status: "draft",
+          payment_status: "unpaid",
           notes: fullQuotationData.notes || null,
           created_by: fullQuotationData.created_by || user_id || null,
           items: quotationItemsData.map(item => ({
-            id: uuidv4(),
-            invoice_id: "",
             product_id: item.product_id,
             name: item.product_name || item.name || 'N/A',
             code: item.product_code || item.code || 'N/A',
             quantity: Number(Number(item.quantity || 0).toFixed(2)),
-            unit_price: Number(Number(item.price || 0).toFixed(2)),
+            unit_price: Number(Number(item.price || item.unit_price || 0).toFixed(2)),
             discount: Number(Number(item.discount || 0).toFixed(2)),
             tax: Number(Number(item.tax || 0).toFixed(2)),
-            subtotal: Number((Number(item.price || 0) * Number(item.quantity || 0) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
+            subtotal: Number(((Number(item.price || item.unit_price || 0) * Number(item.quantity || 0)) - Number(item.discount || 0) + Number(item.tax || 0)).toFixed(2)),
           })),
         };
 

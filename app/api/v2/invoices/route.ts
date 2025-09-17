@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConnection } from "@/lib/mysql";
-import { v4 as uuidv4 } from "uuid";
 import type { FieldPacket, RowDataPacket } from "mysql2";
 import { Invoice, InvoiceItem } from "@/lib/types/invoice";
 
@@ -73,17 +72,22 @@ export async function POST(req: NextRequest) {
 
   try {
     conn = await pool.getConnection();
-    const invoiceId = uuidv4();
     const reference = body.reference || `INV-${Date.now()}`;
 
-    await conn.execute(
+    // Validate enum values
+    const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+    const validPaymentStatuses = ['unpaid', 'partial', 'paid'];
+
+    const status = body.status && validStatuses.includes(body.status) ? body.status : 'draft';
+    const paymentStatus = body.payment_status && validPaymentStatuses.includes(body.payment_status) ? body.payment_status : 'unpaid';
+
+    const [result] = await conn.execute(
       `INSERT INTO invoices (
-        id, reference, date, customer_id, warehouse_id, subtotal, 
-        tax_rate, tax_amount, discount, shipping, total, paid, due, 
+        reference, date, customer_id, warehouse_id, subtotal,
+        tax_rate, tax_amount, discount, shipping, total, paid, due,
         status, payment_status, notes, created_by, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
-        invoiceId,
         reference,
         body.date,
         body.customer_id || null,
@@ -96,22 +100,23 @@ export async function POST(req: NextRequest) {
         body.total,
         body.paid ?? 0,
         body.due ?? 0,
-        body.status || "pending",
-        body.payment_status || "unpaid",
+        status,
+        paymentStatus,
         body.notes ?? null,
         body.created_by ?? null,
       ]
     );
+
+    const invoiceId = (result as any).insertId;
 
     // Insert invoice items
     if (Array.isArray(body.items)) {
       for (const item of body.items) {
         await conn.execute(
           `INSERT INTO invoice_items (
-            id, invoice_id, product_id, quantity, unit_price, discount, tax, subtotal
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            invoice_id, product_id, quantity, unit_price, discount, tax, subtotal
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
-            uuidv4(),
             invoiceId,
             item.product_id,
             item.quantity ?? 0,
@@ -124,7 +129,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, invoiceId, reference });
+    return NextResponse.json({ success: true, id: invoiceId, reference }, { status: 201 });
   } catch (error: unknown) {
     console.error("Error creating invoice:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

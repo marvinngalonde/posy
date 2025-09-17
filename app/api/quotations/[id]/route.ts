@@ -5,8 +5,8 @@ import { Quotation, QuotationItem } from "@/lib/types/quotation";
 import { v4 as uuidv4 } from "uuid";
 
 // READ ONE (GET by id)
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) return NextResponse.json({ error: "Missing quotation ID" }, { status: 400 });
 
   const pool = getConnection();
@@ -40,8 +40,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // UPDATE (PUT)
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const body: Partial<Quotation> = await req.json();
   const pool = getConnection();
   let conn: any;
@@ -108,8 +108,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   if (!id) return NextResponse.json({ error: "Missing quotation ID" }, { status: 400 });
 
   const pool = getConnection();
