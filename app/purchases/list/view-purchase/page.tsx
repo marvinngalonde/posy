@@ -19,7 +19,7 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
@@ -27,7 +27,7 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto flex-1 px-1">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <h3 className="text-sm font-medium text-gray-500">Date</h3>
@@ -43,9 +43,9 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
             </div>
           </div>
 
-          <div className="border rounded-lg">
+          <div className="border rounded-lg max-h-64 overflow-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-white">
                 <TableRow>
                   <TableHead>Product</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
@@ -55,14 +55,14 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
               </TableHeader>
               <TableBody>
                 {purchase.items?.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="font-medium">{item.product_name}</div>
                       <div className="text-sm text-gray-500">{item.product_code}</div>
                     </TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{Number(item.unit_cost)}</TableCell>
-                    <TableCell className="text-right">{Number(item.subtotal)}</TableCell>
+                    <TableCell className="text-right">${Number(item.unit_cost).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${Number(item.subtotal).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -104,9 +104,10 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
             </div>
           </div>
 
-          <div className="flex justify-end">
-            <Button onClick={() => onOpenChange(false)}>Close</Button>
-          </div>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t bg-white">
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </div>
       </DialogContent>
     </Dialog>

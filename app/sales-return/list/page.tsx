@@ -198,12 +198,33 @@ export default function SalesReturnList() {
 
       {selectedReturn && isViewDialogOpen && (
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Sales Return Details</DialogTitle></DialogHeader>
-                <p>Date: {selectedReturn.date}</p>
-                <p>Reference: {selectedReturn.reference}</p>
-                <p>Status: {selectedReturn.status}</p>
-                <p>Total: ${selectedReturn.total}</p>
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Sales Return Details</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 overflow-y-auto flex-1">
+                  <div>
+                    <p className="text-sm text-gray-500">Date</p>
+                    <p className="font-medium">{selectedReturn.date}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Reference</p>
+                    <p className="font-medium">{selectedReturn.reference}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Status</p>
+                    <p className="font-medium">{selectedReturn.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total</p>
+                    <p className="font-medium">${Number(selectedReturn.total).toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-4 border-t bg-white">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                </div>
             </DialogContent>
         </Dialog>
       )}

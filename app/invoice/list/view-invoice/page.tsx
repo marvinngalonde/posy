@@ -20,12 +20,12 @@ export function ViewInvoiceDialog({ invoice, open, onOpenChange }: ViewInvoiceDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Invoice Details</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4">
+
+        <div className="space-y-4 overflow-y-auto flex-1 px-1">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Reference</p>
@@ -122,18 +122,18 @@ export function ViewInvoiceDialog({ invoice, open, onOpenChange }: ViewInvoiceDi
 
           <div className="mt-2">
             <p className="text-sm font-medium mb-2">Items</p>
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-md border max-h-64 overflow-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="text-left p-3">#</th>
-                    <th className="text-left p-3">Product</th>
-                    <th className="text-left p-3">Code</th>
-                    <th className="text-left p-3">Qty</th>
-                    <th className="text-left p-3">Unit Price</th>
-                    <th className="text-left p-3">Discount</th>
-                    <th className="text-left p-3">Tax</th>
-                    <th className="text-left p-3">Subtotal</th>
+                    <th className="text-left p-3 min-w-[40px]">#</th>
+                    <th className="text-left p-3 min-w-[150px]">Product</th>
+                    <th className="text-left p-3 min-w-[100px]">Code</th>
+                    <th className="text-left p-3 min-w-[60px]">Qty</th>
+                    <th className="text-left p-3 min-w-[80px]">Unit Price</th>
+                    <th className="text-left p-3 min-w-[80px]">Discount</th>
+                    <th className="text-left p-3 min-w-[60px]">Tax</th>
+                    <th className="text-left p-3 min-w-[80px]">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -143,7 +143,7 @@ export function ViewInvoiceDialog({ invoice, open, onOpenChange }: ViewInvoiceDi
                     <tr><td className="p-3 text-gray-500" colSpan={8}>No items</td></tr>
                   ) : (
                     items.map((it: any, idx: number) => (
-                      <tr key={it.id} className="border-b">
+                      <tr key={it.id} className="border-b hover:bg-gray-50">
                         <td className="p-3">{idx + 1}</td>
                         <td className="p-3">{it.name || 'N/A'}</td>
                         <td className="p-3">{it.code || 'N/A'}</td>
@@ -160,14 +160,15 @@ export function ViewInvoiceDialog({ invoice, open, onOpenChange }: ViewInvoiceDi
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex justify-end pt-4 border-t bg-white">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
