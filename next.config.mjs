@@ -24,6 +24,35 @@ const nextConfig = {
       },
     });
 
+    // Exclude Puppeteer and related modules from client-side bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+        stream: false,
+        buffer: false,
+        util: false,
+        url: false,
+        querystring: false,
+        http: false,
+        https: false,
+        zlib: false,
+        net: false,
+        tls: false,
+        child_process: false,
+      };
+
+      config.externals = config.externals || [];
+      config.externals.push({
+        puppeteer: 'puppeteer',
+        'puppeteer-core': 'puppeteer-core',
+        handlebars: 'handlebars',
+      });
+    }
+
     return config;
   },
  

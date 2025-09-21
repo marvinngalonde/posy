@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{invoiceNumber}}</title>
+    <style>
+        {{{styles}}}
+    </style>
+</head>
+<body>
+    <div class="document">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-placeholder"></div>
+                <div class="company-info">
+                    <h1>{{organization.name}}</h1>
+                    {{#if organization.email}}
+                        <div class="contact-info">{{organization.email}}</div>
+                    {{/if}}
+                    {{#if organization.phone}}
+                        <div class="contact-info">{{organization.phone}}</div>
+                    {{/if}}
+                    {{#if organization.website}}
+                        <div class="contact-info">{{organization.website}}</div>
+                    {{/if}}
+                    {{#if organization.address}}
+                        <div class="address-info">
+                            {{organization.address}}{{#if organization.city}}, {{organization.city}}{{/if}}{{#if organization.country}}, {{organization.country}}{{/if}}
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="document-title">Invoice</div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Document Information -->
+            <section class="document-info">
+                <div class="client-info">
+                    <h3>Bill To</h3>
+                    <div class="client-name">{{customer.name}}</div>
+                    {{#if customer.email}}
+                        <div class="detail">{{customer.email}}</div>
+                    {{/if}}
+                    {{#if customer.phone}}
+                        <div class="detail">{{customer.phone}}</div>
+                    {{/if}}
+                    {{#if customer.address}}
+                        <div class="detail">{{customer.address}}</div>
+                    {{/if}}
+                    {{#if customer.city}}
+                        <div class="detail">{{customer.city}}{{#if customer.country}}, {{customer.country}}{{/if}}</div>
+                    {{/if}}
+                </div>
+
+                <div class="document-details">
+                    <h3>Invoice Details</h3>
+                    <div class="detail">
+                        <span class="detail-label">Invoice #:</span>
+                        <span>{{invoiceNumber}}</span>
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Invoice Date:</span>
+                        <span>{{formatDate invoiceDate}}</span>
+                    </div>
+                    {{#if dueDate}}
+                        <div class="detail">
+                            <span class="detail-label">Due Date:</span>
+                            <span>{{formatDate dueDate}}</span>
+                        </div>
+                    {{/if}}
+                    {{#if status}}
+                        <div class="detail">
+                            <span class="detail-label">Status:</span>
+                            <span class="status-badge status-{{toLowerCase status}}">{{status}}</span>
+                        </div>
+                    {{/if}}
+                    {{#if paymentMethod}}
+                        <div class="detail">
+                            <span class="detail-label">Payment Method:</span>
+                            <span>{{paymentMethod}}</span>
+                        </div>
+                    {{/if}}
+                </div>
+            </section>
+
+            <!-- Items Table -->
+            <section class="items-section">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each items}}
+                            <tr>
+                                <td>
+                                    <div class="font-bold">{{this.product.name}}</div>
+                                    {{#if this.product.description}}
+                                        <div class="text-secondary">{{this.product.description}}</div>
+                                    {{/if}}
+                                    {{#if this.product.sku}}
+                                        <div class="text-secondary">SKU: {{this.product.sku}}</div>
+                                    {{/if}}
+                                </td>
+                                <td class="text-center">{{this.quantity}}</td>
+                                <td class="text-right">{{formatCurrency this.price ../organization.currency_symbol}}</td>
+                                <td class="text-right font-bold">{{formatCurrency this.total ../organization.currency_symbol}}</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Totals Section -->
+            <section class="totals-section">
+                <div class="totals-box">
+                    <div class="total-row subtotal">
+                        <span class="total-label">Subtotal:</span>
+                        <span class="total-amount">{{formatCurrency subtotal organization.currency_symbol}}</span>
+                    </div>
+
+                    {{#if taxAmount}}
+                        <div class="total-row">
+                            <span class="total-label">Tax ({{taxPercentage}}%):</span>
+                            <span class="total-amount">{{formatCurrency taxAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    {{#if discountAmount}}
+                        <div class="total-row">
+                            <span class="total-label discount">Discount:</span>
+                            <span class="total-amount discount">-{{formatCurrency discountAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    {{#if shippingCost}}
+                        <div class="total-row">
+                            <span class="total-label">Shipping:</span>
+                            <span class="total-amount">{{formatCurrency shippingCost organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    <div class="total-row final">
+                        <span class="total-label">TOTAL:</span>
+                        <span class="total-amount">{{formatCurrency totalAmount organization.currency_symbol}}</span>
+                    </div>
+
+                    {{#if amountPaid}}
+                        <div class="total-row">
+                            <span class="total-label text-success">Amount Paid:</span>
+                            <span class="total-amount text-success">{{formatCurrency amountPaid organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    {{#if balanceDue}}
+                        <div class="total-row">
+                            <span class="total-label text-warning">Balance Due:</span>
+                            <span class="total-amount text-warning">{{formatCurrency balanceDue organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+                </div>
+            </section>
+
+            <!-- Payment Information -->
+            {{#if organization.bank_name}}
+                <section class="payment-section">
+                    <h4 class="text-primary">Payment Information</h4>
+                    <div class="bg-light" style="padding: 15px; border-radius: 6px; margin-top: 10px;">
+                        {{#if organization.bank_name}}
+                            <div class="detail">
+                                <span class="detail-label">Bank:</span>
+                                <span>{{organization.bank_name}}</span>
+                            </div>
+                        {{/if}}
+                        {{#if organization.bank_account}}
+                            <div class="detail">
+                                <span class="detail-label">Account Number:</span>
+                                <span>{{organization.bank_account}}</span>
+                            </div>
+                        {{/if}}
+                        {{#if organization.bank_branch}}
+                            <div class="detail">
+                                <span class="detail-label">Branch/Routing:</span>
+                                <span>{{organization.bank_branch}}</span>
+                            </div>
+                        {{/if}}
+                        {{#if organization.swift_code}}
+                            <div class="detail">
+                                <span class="detail-label">SWIFT Code:</span>
+                                <span>{{organization.swift_code}}</span>
+                            </div>
+                        {{/if}}
+                        {{#if organization.iban}}
+                            <div class="detail">
+                                <span class="detail-label">IBAN:</span>
+                                <span>{{organization.iban}}</span>
+                            </div>
+                        {{/if}}
+                    </div>
+                </section>
+            {{/if}}
+
+            <!-- Notes Section -->
+            {{#if notes}}
+                <section class="notes-section">
+                    <h4>Notes</h4>
+                    <div class="notes-content">{{notes}}</div>
+                </section>
+            {{/if}}
+
+            <!-- Terms & Conditions -->
+            {{#if organization.terms_conditions}}
+                <section class="terms-section">
+                    <h4>Terms & Conditions</h4>
+                    <div>{{organization.terms_conditions}}</div>
+                </section>
+            {{/if}}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-info">
+                {{organization.name}}
+                {{#if organization.email}} | {{organization.email}}{{/if}}
+                {{#if organization.phone}} | {{organization.phone}}{{/if}}
+                {{#if organization.website}} | {{organization.website}}{{/if}}
+            </div>
+            {{#if organization.address}}
+                <div class="footer-info">
+                    {{organization.address}}{{#if organization.city}}, {{organization.city}}{{/if}}{{#if organization.country}}, {{organization.country}}{{/if}}
+                </div>
+            {{/if}}
+        </footer>
+    </div>
+</body>
+</html>

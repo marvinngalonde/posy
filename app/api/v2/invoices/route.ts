@@ -75,11 +75,14 @@ export async function POST(req: NextRequest) {
     const reference = body.reference || `INV-${Date.now()}`;
 
     // Validate enum values
-    const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+    const validStatuses = ['draft', 'pending', 'sent', 'paid', 'overdue', 'cancelled'];
     const validPaymentStatuses = ['unpaid', 'partial', 'paid'];
 
-    const status = body.status && validStatuses.includes(body.status) ? body.status : 'draft';
+    const status = body.status && validStatuses.includes(body.status) ? body.status : 'pending';
     const paymentStatus = body.payment_status && validPaymentStatuses.includes(body.payment_status) ? body.payment_status : 'unpaid';
+
+    // Format date to MySQL DATE format (YYYY-MM-DD)
+    const formattedDate = body.date ? new Date(body.date).toISOString().split('T')[0] : null;
 
     const [result] = await conn.execute(
       `INSERT INTO invoices (
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         reference,
-        body.date,
+        formattedDate,
         body.customer_id || null,
         body.warehouse_id || null,
         body.subtotal ?? 0,

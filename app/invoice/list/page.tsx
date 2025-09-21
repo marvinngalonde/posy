@@ -9,9 +9,8 @@ import { Search, FileDown, Edit, Trash2, ChevronLeft, ChevronRight, Eye } from "
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { generateDocumentPDF } from '@/lib/utils/pdf'
+// Old jsPDF imports removed - now using server-side Handlebars templates
+// PDF generation moved to server-side API routes
 import { useGetOrganizationQuery } from '@/lib/slices/organizationApi'
 import type React from "react"
 import { useGetInvoicesQuery, useDeleteInvoiceMutation, useGetInvoiceByIdQuery, useGetInvoiceItemsQuery } from "@/lib/slices/invoicesApi"
@@ -91,30 +90,7 @@ export default function InvoiceList() {
   }
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Invoice List', 14, 16)
-    
-    const tableData = invoices.map(invoice => [
-      invoice.date,
-      invoice.reference,
-      invoice.customer_name || 'Unknown',
-      invoice.warehouse_name || 'Unknown',
-      invoice.status,
-      `$${Number(invoice.total).toFixed(2)}`,
-      `$${Number(invoice.paid).toFixed(2)}`,
-      `$${Number(invoice.due).toFixed(2)}`,
-      invoice.payment_status
-    ])
-    
-    autoTable(doc, {
-      head: [['Date', 'Reference', 'Customer', 'Warehouse', 'Status', 'Total', 'Paid', 'Due', 'Payment Status']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
-    })
-    
-    doc.save('invoices.pdf')
+    toast.info("To export an invoice PDF, use the PDF button next to each individual invoice in the table below. This will generate a professional invoice using your organization's branding.")
   }
 
   const exportToExcel = () => {
@@ -146,12 +122,19 @@ export default function InvoiceList() {
     const itemsResult = await itemsResponse.json();
     const itemsData = itemsResult.data || [];
 
+    // Debug: Uncomment to troubleshoot item data issues
+    // console.log('Invoice data:', invoiceData);
+    // console.log('Items response:', itemsResult);
+    // console.log('Items data:', itemsData);
+
     // Prepare data for PDF generation
-    const pdfConfig = {
-      title: 'Invoice',
-      documentNumber: invoiceData.reference || 'INV-001',
-      documentDate: new Date(invoiceData.date),
-      clientInfo: {
+    const pdfData = {
+      organization: organization!,
+      invoiceNumber: invoiceData.reference || 'INV-001',
+      invoiceDate: invoiceData.date,
+      dueDate: invoiceData.due_date || null,
+      status: invoiceData.status || 'Pending',
+      customer: {
         name: invoiceData.customer?.name || invoiceData.customer_name || 'Customer Name',
         email: invoiceData.customer?.email || '',
         phone: invoiceData.customer?.phone || '',
@@ -159,25 +142,58 @@ export default function InvoiceList() {
         city: invoiceData.customer?.city || '',
         country: invoiceData.customer?.country || ''
       },
-      items: itemsData.map((item: any) => ({
-        description: item.product?.name || item.product_name || item.name || 'Product',
+      items: itemsData.length > 0 ? itemsData.map((item: any) => ({
+        product: {
+          name: item.name || 'Product',
+          description: item.description || '',
+          sku: item.code || ''
+        },
         quantity: Number(item.quantity || 0),
-        unitPrice: Number(item.price || item.unit_price || 0),
-        total: Number(item.subtotal || (item.quantity * item.price) || 0)
-      })),
-      totals: {
-        subtotal: Number(invoiceData.subtotal || 0),
-        tax: Number(invoiceData.tax_amount || 0),
-        discount: Number(invoiceData.discount || 0),
-        total: Number(invoiceData.total || 0)
-      },
-      notes: invoiceData.notes || (organization?.invoice_footer || 'Thank you for your business!'),
-      dueDate: invoiceData.due_date ? new Date(invoiceData.due_date) : undefined,
-      status: invoiceData.status || 'Pending'
+        price: Number(item.unit_price || 0),
+        total: Number(item.subtotal || (item.quantity * item.unit_price) || 0)
+      })) : [
+        {
+          product: {
+            name: 'Sample Item',
+            description: 'No items found for this invoice',
+            sku: 'N/A'
+          },
+          quantity: 1,
+          price: Number(invoiceData.total || 0),
+          total: Number(invoiceData.total || 0)
+        }
+      ],
+      subtotal: Number(invoiceData.subtotal || 0),
+      taxAmount: Number(invoiceData.tax_amount || 0),
+      discountAmount: Number(invoiceData.discount || 0),
+      totalAmount: Number(invoiceData.total || 0),
+      notes: invoiceData.notes || (organization?.invoice_footer || 'Thank you for your business!')
     };
 
-    const doc = generateDocumentPDF(pdfConfig, organization);
-    doc.save(`invoice-${pdfConfig.documentNumber}.pdf`);
+    // Call server-side PDF generation API
+    const pdfResponse = await fetch('/api/pdf/invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(pdfData)
+    });
+
+    if (!pdfResponse.ok) {
+      throw new Error(`PDF generation failed: ${pdfResponse.statusText}`);
+    }
+
+    // Create download from response
+    const pdfBlob = await pdfResponse.blob();
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${pdfData.invoiceNumber}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     toast.success("Invoice PDF generated successfully!");
   } catch (error) {
     console.error("Error generating invoice PDF:", error);

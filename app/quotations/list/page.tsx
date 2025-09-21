@@ -16,9 +16,8 @@ import { Search, FileDown, Edit, Trash2, ChevronLeft, ChevronRight, MoreHorizont
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import * as XLSX from 'xlsx'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { generateDocumentPDF } from '@/lib/utils/pdf'
+// Old jsPDF imports removed - now using server-side Handlebars templates
+// PDF generation moved to server-side API routes
 import { useGetOrganizationQuery } from '@/lib/slices/organizationApi'
 import type React from "react"
 import { ViewQuotationDialog } from "./view-quotation/page"
@@ -104,27 +103,7 @@ export default function QuotationList() {
   }
 
   const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Quotation List', 14, 16)
-    
-    const tableData = quotations.map(quotation => [
-      quotation.date,
-      quotation.reference,
-      quotation.customers?.name || quotation.customer_name || '',
-      quotation.warehouses?.name || quotation.warehouse_name || '',
-      quotation.status,
-      `$${Number(quotation.total).toFixed(2)}`
-    ])
-    
-    autoTable(doc, {
-      head: [['Date', 'Reference', 'Customer', 'Warehouse', 'Status', 'Total']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
-    })
-    
-    doc.save('quotations.pdf')
+    toast.info("To export a quotation PDF, use the PDF button next to each individual quotation in the table below. This will generate a professional quotation using your organization's branding.")
   }
 
   const exportToExcel = () => {
@@ -153,13 +132,20 @@ export default function QuotationList() {
       const itemsResponse = await fetch(`/api/v2/quotations/items?quotation_id=${quotationId}`);
       const itemsResult = await itemsResponse.json();
       const itemsData = itemsResult.data || [];
-  
+
+      // Debug: Uncomment to troubleshoot item data issues
+      // console.log('Quotation data:', quotationData);
+      // console.log('Items response:', itemsResult);
+      // console.log('Items data:', itemsData);
+
       // Prepare data for PDF generation
-      const pdfConfig = {
-        title: 'Quotation',
-        documentNumber: quotationData.reference || 'QUO-001',
-        documentDate: new Date(quotationData.date),
-        clientInfo: {
+      const pdfData = {
+        organization: organization!,
+        quotationNumber: quotationData.reference || 'QUO-001',
+        quotationDate: quotationData.date,
+        validUntil: quotationData.valid_until || null,
+        status: quotationData.status || 'Pending',
+        customer: {
           name: quotationData.customers?.name || quotationData.customer_name || 'Customer Name',
           email: quotationData.customers?.email || '',
           phone: quotationData.customers?.phone || '',
@@ -167,25 +153,58 @@ export default function QuotationList() {
           city: quotationData.customers?.city || '',
           country: quotationData.customers?.country || ''
         },
-        items: itemsData.map((item: any) => ({
-          description: item.products?.name || item.product_name || 'Product',
+        items: itemsData.length > 0 ? itemsData.map((item: any) => ({
+          product: {
+            name: item.products?.name || item.product_name || 'Product',
+            description: item.products?.description || '',
+            sku: item.products?.sku || ''
+          },
           quantity: Number(item.quantity || 0),
-          unitPrice: Number(item.price || item.unit_price || 0),
+          price: Number(item.price || item.unit_price || 0),
           total: Number(item.subtotal || (item.quantity * item.price) || 0)
-        })),
-        totals: {
-          subtotal: Number(quotationData.subtotal || 0),
-          tax: Number(quotationData.tax_amount || 0),
-          discount: Number(quotationData.discount || 0),
-          total: Number(quotationData.total || 0)
-        },
-        notes: quotationData.notes || (organization?.quotation_footer || 'Thank you for your business!'),
-        dueDate: quotationData.valid_until ? new Date(quotationData.valid_until) : undefined,
-        status: quotationData.status || 'Pending'
+        })) : [
+          {
+            product: {
+              name: 'Sample Item',
+              description: 'No items found for this quotation',
+              sku: 'N/A'
+            },
+            quantity: 1,
+            price: Number(quotationData.total || 0),
+            total: Number(quotationData.total || 0)
+          }
+        ],
+        subtotal: Number(quotationData.subtotal || 0),
+        taxAmount: Number(quotationData.tax_amount || 0),
+        discountAmount: Number(quotationData.discount || 0),
+        totalAmount: Number(quotationData.total || 0),
+        notes: quotationData.notes || (organization?.quotation_footer || 'Thank you for your business!')
       };
 
-      const doc = generateDocumentPDF(pdfConfig, organization);
-      doc.save(`quotation-${pdfConfig.documentNumber}.pdf`);
+      // Call server-side PDF generation API
+      const pdfResponse = await fetch('/api/pdf/quotation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pdfData)
+      });
+
+      if (!pdfResponse.ok) {
+        throw new Error(`PDF generation failed: ${pdfResponse.statusText}`);
+      }
+
+      // Create download from response
+      const pdfBlob = await pdfResponse.blob();
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quotation-${pdfData.quotationNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
       toast.success("Quotation PDF generated successfully!");
     } catch (error) {
       console.error("Error generating quotation PDF:", error);
@@ -201,7 +220,8 @@ export default function QuotationList() {
         const fetchedFullQuotation: FullQuotation = await quotationDetailsResponse.json();
 
         const quotationItemsResponse = await fetch(`/api/quotations/items?quotation_id=${quotation.id}`);
-        const fetchedQuotationItems: QuotationItem[] = await quotationItemsResponse.json();
+        const quotationItemsResult = await quotationItemsResponse.json();
+        const fetchedQuotationItems: QuotationItem[] = quotationItemsResult.data || [];
 
         if (!fetchedFullQuotation || !fetchedQuotationItems) {
           throw new Error("Failed to fetch full quotation details or items for invoice conversion.");
@@ -228,7 +248,7 @@ export default function QuotationList() {
           total: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
           paid: 0, 
           due: Number(Number(fetchedFullQuotation.total || 0).toFixed(2)),
-          status: "draft",
+          status: "pending",
           payment_status: "unpaid", 
           notes: fetchedFullQuotation.notes || null,
           created_by: fetchedFullQuotation.created_by || user_id || null,
@@ -248,7 +268,11 @@ export default function QuotationList() {
 
         const newInvoice = await createInvoice(invoicePayload).unwrap();
         toast.success(`Invoice ${newInvoice.reference} created from quotation!`);
-        router.push(`/invoice/edit/${newInvoice.id}`);
+
+        // Small delay to ensure cache is updated
+        setTimeout(() => {
+          router.push(`/invoice/edit/${newInvoice.id}`);
+        }, 100);
       } else {
         const user_id = localStorage.getItem('UserId');
 
@@ -271,7 +295,7 @@ export default function QuotationList() {
           total: Number(Number(fullQuotationData.total || 0).toFixed(2)),
           paid: 0, 
           due: Number(Number(fullQuotationData.total || 0).toFixed(2)), 
-          status: "draft",
+          status: "pending",
           payment_status: "unpaid",
           notes: fullQuotationData.notes || null,
           created_by: fullQuotationData.created_by || user_id || null,
@@ -289,7 +313,11 @@ export default function QuotationList() {
 
         const newInvoice = await createInvoice(invoicePayload).unwrap();
         toast.success(`Invoice ${newInvoice.reference} created from quotation!`);
-        router.push(`/invoice/edit/${newInvoice.id}`);
+
+        // Small delay to ensure cache is updated
+        setTimeout(() => {
+          router.push(`/invoice/edit/${newInvoice.id}`);
+        }, 100);
       }
     } catch (error: any) {
       console.error("Error creating invoice from quotation:", error);

@@ -1,0 +1,411 @@
+/* Base PDF Template Styles */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
+  background: white;
+}
+
+.document {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm;
+  background: white;
+  position: relative;
+}
+
+/* Header Styles */
+.header {
+  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  color: white;
+  padding: 20px;
+  margin: -20mm -20mm 30px -20mm;
+  position: relative;
+  min-height: 100px;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60px;
+  height: 60px;
+  background: rgba(147, 197, 253, 0.3);
+  border-radius: 50%;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 25px;
+  height: 25px;
+  background: rgba(147, 197, 253, 0.5);
+  border-radius: 50%;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.logo-placeholder {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  margin-right: 15px;
+  position: relative;
+}
+
+.logo-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  background: #3b82f6;
+  border-radius: 50%;
+}
+
+.company-info h1 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.contact-info {
+  font-size: 11px;
+  opacity: 0.9;
+  margin-bottom: 3px;
+}
+
+.address-info {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.document-title {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 28px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Main Content */
+.content {
+  margin-top: 30px;
+}
+
+.document-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 40px;
+}
+
+.client-info h3,
+.document-details h3 {
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.client-info .client-name {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.client-info .detail,
+.document-details .detail {
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.document-details {
+  text-align: right;
+  min-width: 200px;
+}
+
+.document-details .detail {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.detail-label {
+  font-weight: bold;
+  margin-right: 15px;
+  color: #374151;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: white;
+  background: #3b82f6;
+}
+
+.status-pending { background: #f59e0b; }
+.status-sent { background: #3b82f6; }
+.status-paid { background: #10b981; }
+.status-overdue { background: #ef4444; }
+
+/* Items Table */
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 30px 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.items-table thead {
+  background: #3b82f6;
+  color: white;
+}
+
+.items-table th {
+  padding: 15px 12px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.items-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 11px;
+}
+
+.items-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.items-table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.font-bold {
+  font-weight: bold;
+}
+
+/* Totals Section */
+.totals-section {
+  margin-top: 30px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.totals-box {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 300px;
+  border: 1px solid #e5e7eb;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 5px 0;
+}
+
+.total-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.total-amount {
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.total-row.subtotal {
+  border-bottom: 1px solid #d1d5db;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.total-row.final {
+  border-top: 2px solid #3b82f6;
+  padding-top: 12px;
+  margin-top: 12px;
+  font-size: 16px;
+}
+
+.total-row.final .total-label,
+.total-row.final .total-amount {
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+.discount {
+  color: #ef4444;
+}
+
+/* Notes Section */
+.notes-section {
+  margin-top: 40px;
+}
+
+.notes-section h4 {
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.notes-content {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #374151;
+}
+
+/* Terms & Conditions */
+.terms-section {
+  margin-top: 30px;
+  font-size: 9px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.terms-section h4 {
+  color: #3b82f6;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Footer */
+.footer {
+  position: absolute;
+  bottom: 15mm;
+  left: 20mm;
+  right: 20mm;
+  text-align: center;
+  padding-top: 15px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 9px;
+  color: #6b7280;
+}
+
+.footer-info {
+  margin-bottom: 3px;
+}
+
+/* Utility Classes */
+.text-primary {
+  color: #3b82f6;
+}
+
+.text-secondary {
+  color: #6b7280;
+}
+
+.text-success {
+  color: #10b981;
+}
+
+.text-danger {
+  color: #ef4444;
+}
+
+.text-warning {
+  color: #f59e0b;
+}
+
+.bg-light {
+  background: #f8fafc;
+}
+
+.border-bottom {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.mb-small {
+  margin-bottom: 10px;
+}
+
+.mb-medium {
+  margin-bottom: 20px;
+}
+
+.mb-large {
+  margin-bottom: 30px;
+}
+
+/* Print Optimization */
+@media print {
+  .document {
+    margin: 0;
+    padding: 15mm;
+  }
+
+  .header {
+    margin: -15mm -15mm 25px -15mm;
+  }
+
+  .footer {
+    bottom: 10mm;
+    left: 15mm;
+    right: 15mm;
+  }
+
+  .items-table {
+    page-break-inside: avoid;
+  }
+
+  .totals-section {
+    page-break-inside: avoid;
+  }
+}

@@ -173,8 +173,8 @@ export default function EditQuotation({ params }: { params: Promise<PageParams> 
       try {
         const response = await fetch(`/api/quotations/items?quotation_id=${id}`)
         if (response.ok) {
-          const itemsData = await response.json()
-          setItems(itemsData || [])
+          const result = await response.json()
+          setItems(result.data || [])
         }
       } catch (error) {
         console.error("Error loading quotation items:", error)

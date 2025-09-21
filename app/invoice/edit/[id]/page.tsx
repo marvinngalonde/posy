@@ -100,7 +100,7 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
       setPaidAmount(Number(invoiceData.paid) || 0)
       setNote(invoiceData.notes || "")
       setLoading(false)
-    } else if (id && !isInvoiceLoading && customersLoading && warehousesLoading) {
+    } else if (id && !isInvoiceLoading && !customersLoading && !warehousesLoading && !invoiceData) {
       // If data fetching is complete but no invoiceData, then it's not found
       toast.error("Invoice not found.")
       router.push("/invoice/list")
@@ -111,13 +111,18 @@ export default function EditInvoice({ params }: { params: Promise<PageParams> })
   const { data: invoiceItemsData, isLoading: isInvoiceItemsLoading } = useGetInvoiceItemsQuery(id, { skip: !id });
 
   useEffect(() => {
-    if (invoiceItemsData) {
+    if (invoiceItemsData && Array.isArray(invoiceItemsData)) {
       setItems(invoiceItemsData)
+    } else if (invoiceItemsData) {
+      setItems([])
     }
   }, [invoiceItemsData])
 
   // Calculations - matching create page logic
   const subtotal = useMemo(() => {
+    if (!Array.isArray(items)) {
+      return 0
+    }
     return items.reduce((sum, item) => {
       const price = Number(item.unit_price) || 0
       const quantity = Number(item.quantity) || 0

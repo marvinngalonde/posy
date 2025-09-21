@@ -83,8 +83,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         body.reference,
-        body.date,
-        body.valid_until ?? null,
+        body.date ? new Date(body.date).toISOString().split('T')[0] : null,
+        body.valid_until ? new Date(body.valid_until).toISOString().split('T')[0] : null,
         body.customer_id,
         body.warehouse_id,
         Number(body.subtotal),
@@ -308,8 +308,8 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
        WHERE id = ?`,
       [
         body.reference,
-        body.date,
-        body.valid_until || null,
+        body.date ? new Date(body.date).toISOString().split('T')[0] : null,
+        body.valid_until ? new Date(body.valid_until).toISOString().split('T')[0] : null,
         body.customer_id,
         body.warehouse_id,
         body.subtotal,

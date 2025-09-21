@@ -49,21 +49,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     conn = await pool.getConnection();
 
     // Validate enum values
-    const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
+    const validStatuses = ['draft', 'pending', 'sent', 'paid', 'overdue', 'cancelled'];
     const validPaymentStatuses = ['unpaid', 'partial', 'paid'];
 
-    const status = body.status && validStatuses.includes(body.status) ? body.status : 'draft';
+    const status = body.status && validStatuses.includes(body.status) ? body.status : 'pending';
     const paymentStatus = body.payment_status && validPaymentStatuses.includes(body.payment_status) ? body.payment_status : 'unpaid';
 
+    // Format date to MySQL DATE format (YYYY-MM-DD)
+    const formattedDate = body.date ? new Date(body.date).toISOString().split('T')[0] : null;
+
     await conn.execute(
-      `UPDATE invoices SET 
-        reference=?, date=?, customer_id=?, warehouse_id=?, subtotal=?, 
-        tax_rate=?, tax_amount=?, discount=?, shipping=?, total=?, paid=?, due=?, 
+      `UPDATE invoices SET
+        reference=?, date=?, customer_id=?, warehouse_id=?, subtotal=?,
+        tax_rate=?, tax_amount=?, discount=?, shipping=?, total=?, paid=?, due=?,
         status=?, payment_status=?, notes=?, updated_at=NOW()
        WHERE id=?`,
       [
         body.reference,
-        body.date,
+        formattedDate,
         body.customer_id ?? null,
         body.warehouse_id ?? null,
         body.subtotal ?? 0,

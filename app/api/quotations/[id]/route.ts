@@ -56,8 +56,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
        WHERE id=?`,
       [
         body.reference,
-        body.date,
-        body.valid_until ?? null,
+        body.date ? new Date(body.date).toISOString().split('T')[0] : null,
+        body.valid_until ? new Date(body.valid_until).toISOString().split('T')[0] : null,
         body.customer_id ?? null,
         body.warehouse_id ?? null,
         body.subtotal ?? 0,

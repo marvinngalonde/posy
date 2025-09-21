@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt {{receiptNumber}}</title>
+    <style>
+        {{{styles}}}
+
+        /* Receipt-specific styles */
+        .document {
+            width: 80mm;
+            min-height: auto;
+            padding: 10mm;
+            font-size: 11px;
+        }
+
+        .header {
+            background: #1f2937;
+            padding: 15px 10px;
+            margin: -10mm -10mm 20px -10mm;
+            text-align: center;
+        }
+
+        .header::before,
+        .header::after {
+            display: none;
+        }
+
+        .logo-section {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .logo-placeholder {
+            margin: 0 auto 10px auto;
+        }
+
+        .company-info h1 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .contact-info,
+        .address-info {
+            font-size: 10px;
+            text-align: center;
+        }
+
+        .document-title {
+            position: static;
+            transform: none;
+            font-size: 16px;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        .document-info {
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .client-info,
+        .document-details {
+            text-align: left;
+        }
+
+        .document-details {
+            min-width: auto;
+        }
+
+        .items-table {
+            font-size: 10px;
+            margin: 15px 0;
+        }
+
+        .items-table th,
+        .items-table td {
+            padding: 8px 4px;
+        }
+
+        .items-table th {
+            font-size: 9px;
+        }
+
+        .totals-section {
+            justify-content: center;
+        }
+
+        .totals-box {
+            min-width: auto;
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .total-row {
+            font-size: 11px;
+        }
+
+        .total-row.final {
+            font-size: 13px;
+        }
+
+        .footer {
+            position: static;
+            margin-top: 20px;
+            font-size: 8px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+        }
+
+        .thank-you {
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+            color: #3b82f6;
+            font-size: 14px;
+        }
+
+        .qr-section {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+
+        .receipt-details {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        @media print {
+            .document {
+                width: 80mm;
+                padding: 5mm;
+            }
+
+            .header {
+                margin: -5mm -5mm 15px -5mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="document">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-placeholder"></div>
+                <div class="company-info">
+                    <h1>{{organization.name}}</h1>
+                    {{#if organization.email}}
+                        <div class="contact-info">{{organization.email}}</div>
+                    {{/if}}
+                    {{#if organization.phone}}
+                        <div class="contact-info">{{organization.phone}}</div>
+                    {{/if}}
+                    {{#if organization.address}}
+                        <div class="address-info">
+                            {{organization.address}}{{#if organization.city}}, {{organization.city}}{{/if}}
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="document-title">Receipt</div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Receipt Details -->
+            <section class="receipt-details">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: bold;">Receipt #:</span>
+                    <span>{{receiptNumber}}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: bold;">Date:</span>
+                    <span>{{formatDateTime saleDate}}</span>
+                </div>
+                {{#if cashier}}
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: bold;">Cashier:</span>
+                        <span>{{cashier.name}}</span>
+                    </div>
+                {{/if}}
+                {{#if paymentMethod}}
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: bold;">Payment:</span>
+                        <span>{{paymentMethod}}</span>
+                    </div>
+                {{/if}}
+            </section>
+
+            <!-- Customer Information (if available) -->
+            {{#if customer}}
+                <section class="document-info">
+                    <div class="client-info">
+                        <h3 style="font-size: 12px; margin-bottom: 8px;">Customer</h3>
+                        <div class="client-name">{{customer.name}}</div>
+                        {{#if customer.email}}
+                            <div class="detail">{{customer.email}}</div>
+                        {{/if}}
+                        {{#if customer.phone}}
+                            <div class="detail">{{customer.phone}}</div>
+                        {{/if}}
+                    </div>
+                </section>
+            {{/if}}
+
+            <!-- Items Table -->
+            <section class="items-section">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">Item</th>
+                            <th style="text-align: center; width: 20px;">Qty</th>
+                            <th style="text-align: right; width: 35px;">Price</th>
+                            <th style="text-align: right; width: 40px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each items}}
+                            <tr>
+                                <td>
+                                    <div class="font-bold">{{this.product.name}}</div>
+                                    {{#if this.product.sku}}
+                                        <div class="text-secondary" style="font-size: 9px;">{{this.product.sku}}</div>
+                                    {{/if}}
+                                </td>
+                                <td class="text-center">{{this.quantity}}</td>
+                                <td class="text-right">{{formatCurrency this.price ../organization.currency_symbol}}</td>
+                                <td class="text-right font-bold">{{formatCurrency this.total ../organization.currency_symbol}}</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Totals Section -->
+            <section class="totals-section">
+                <div class="totals-box">
+                    <div class="total-row subtotal">
+                        <span class="total-label">Subtotal:</span>
+                        <span class="total-amount">{{formatCurrency subtotal organization.currency_symbol}}</span>
+                    </div>
+
+                    {{#if taxAmount}}
+                        <div class="total-row">
+                            <span class="total-label">Tax:</span>
+                            <span class="total-amount">{{formatCurrency taxAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    {{#if discountAmount}}
+                        <div class="total-row">
+                            <span class="total-label discount">Discount:</span>
+                            <span class="total-amount discount">-{{formatCurrency discountAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    <div class="total-row final">
+                        <span class="total-label">TOTAL:</span>
+                        <span class="total-amount">{{formatCurrency totalAmount organization.currency_symbol}}</span>
+                    </div>
+
+                    {{#if amountPaid}}
+                        <div class="total-row">
+                            <span class="total-label">Paid:</span>
+                            <span class="total-amount">{{formatCurrency amountPaid organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    {{#if changeAmount}}
+                        <div class="total-row">
+                            <span class="total-label">Change:</span>
+                            <span class="total-amount">{{formatCurrency changeAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+                </div>
+            </section>
+
+            <!-- Thank You Message -->
+            <div class="thank-you">
+                Thank You for Your Purchase!
+            </div>
+
+            <!-- QR Code Section (if needed) -->
+            {{#if qrCode}}
+                <section class="qr-section">
+                    <div style="font-size: 10px; margin-bottom: 8px;">Scan for Digital Receipt</div>
+                    <img src="{{qrCode}}" alt="QR Code" style="width: 80px; height: 80px;">
+                </section>
+            {{/if}}
+
+            <!-- Return Policy -->
+            {{#if organization.return_policy}}
+                <section class="terms-section">
+                    <h4 style="font-size: 10px;">Return Policy</h4>
+                    <div style="font-size: 8px;">{{organization.return_policy}}</div>
+                </section>
+            {{/if}}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-info">{{organization.name}}</div>
+            {{#if organization.website}}
+                <div class="footer-info">{{organization.website}}</div>
+            {{/if}}
+            <div class="footer-info" style="margin-top: 8px;">
+                Generated on {{formatDateTime currentDate}}
+            </div>
+        </footer>
+    </div>
+</body>
+</html>

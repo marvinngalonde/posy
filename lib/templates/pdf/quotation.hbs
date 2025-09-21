@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotation {{quotationNumber}}</title>
+    <style>
+        {{{styles}}}
+    </style>
+</head>
+<body>
+    <div class="document">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-placeholder"></div>
+                <div class="company-info">
+                    <h1>{{organization.name}}</h1>
+                    {{#if organization.email}}
+                        <div class="contact-info">{{organization.email}}</div>
+                    {{/if}}
+                    {{#if organization.phone}}
+                        <div class="contact-info">{{organization.phone}}</div>
+                    {{/if}}
+                    {{#if organization.website}}
+                        <div class="contact-info">{{organization.website}}</div>
+                    {{/if}}
+                    {{#if organization.address}}
+                        <div class="address-info">
+                            {{organization.address}}{{#if organization.city}}, {{organization.city}}{{/if}}{{#if organization.country}}, {{organization.country}}{{/if}}
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="document-title">Quotation</div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Document Information -->
+            <section class="document-info">
+                <div class="client-info">
+                    <h3>Quotation To</h3>
+                    <div class="client-name">{{customer.name}}</div>
+                    {{#if customer.email}}
+                        <div class="detail">{{customer.email}}</div>
+                    {{/if}}
+                    {{#if customer.phone}}
+                        <div class="detail">{{customer.phone}}</div>
+                    {{/if}}
+                    {{#if customer.address}}
+                        <div class="detail">{{customer.address}}</div>
+                    {{/if}}
+                    {{#if customer.city}}
+                        <div class="detail">{{customer.city}}{{#if customer.country}}, {{customer.country}}{{/if}}</div>
+                    {{/if}}
+                </div>
+
+                <div class="document-details">
+                    <h3>Document Details</h3>
+                    <div class="detail">
+                        <span class="detail-label">Quotation #:</span>
+                        <span>{{quotationNumber}}</span>
+                    </div>
+                    <div class="detail">
+                        <span class="detail-label">Date:</span>
+                        <span>{{formatDate quotationDate}}</span>
+                    </div>
+                    {{#if validUntil}}
+                        <div class="detail">
+                            <span class="detail-label">Valid Until:</span>
+                            <span>{{formatDate validUntil}}</span>
+                        </div>
+                    {{/if}}
+                    {{#if status}}
+                        <div class="detail">
+                            <span class="detail-label">Status:</span>
+                            <span class="status-badge status-{{toLowerCase status}}">{{status}}</span>
+                        </div>
+                    {{/if}}
+                </div>
+            </section>
+
+            <!-- Items Table -->
+            <section class="items-section">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each items}}
+                            <tr>
+                                <td>
+                                    <div class="font-bold">{{this.product.name}}</div>
+                                    {{#if this.product.description}}
+                                        <div class="text-secondary">{{this.product.description}}</div>
+                                    {{/if}}
+                                    {{#if this.product.sku}}
+                                        <div class="text-secondary">SKU: {{this.product.sku}}</div>
+                                    {{/if}}
+                                </td>
+                                <td class="text-center">{{this.quantity}}</td>
+                                <td class="text-right">{{formatCurrency this.price ../organization.currency_symbol}}</td>
+                                <td class="text-right font-bold">{{formatCurrency this.total ../organization.currency_symbol}}</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Totals Section -->
+            <section class="totals-section">
+                <div class="totals-box">
+                    <div class="total-row subtotal">
+                        <span class="total-label">Subtotal:</span>
+                        <span class="total-amount">{{formatCurrency subtotal organization.currency_symbol}}</span>
+                    </div>
+
+                    {{#if taxAmount}}
+                        <div class="total-row">
+                            <span class="total-label">Tax ({{taxPercentage}}%):</span>
+                            <span class="total-amount">{{formatCurrency taxAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    {{#if discountAmount}}
+                        <div class="total-row">
+                            <span class="total-label discount">Discount:</span>
+                            <span class="total-amount discount">-{{formatCurrency discountAmount organization.currency_symbol}}</span>
+                        </div>
+                    {{/if}}
+
+                    <div class="total-row final">
+                        <span class="total-label">TOTAL:</span>
+                        <span class="total-amount">{{formatCurrency totalAmount organization.currency_symbol}}</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notes Section -->
+            {{#if notes}}
+                <section class="notes-section">
+                    <h4>Notes</h4>
+                    <div class="notes-content">{{notes}}</div>
+                </section>
+            {{/if}}
+
+            <!-- Terms & Conditions -->
+            {{#if organization.terms_conditions}}
+                <section class="terms-section">
+                    <h4>Terms & Conditions</h4>
+                    <div>{{organization.terms_conditions}}</div>
+                </section>
+            {{/if}}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-info">
+                {{organization.name}}
+                {{#if organization.email}} | {{organization.email}}{{/if}}
+                {{#if organization.phone}} | {{organization.phone}}{{/if}}
+                {{#if organization.website}} | {{organization.website}}{{/if}}
+            </div>
+            {{#if organization.address}}
+                <div class="footer-info">
+                    {{organization.address}}{{#if organization.city}}, {{organization.city}}{{/if}}{{#if organization.country}}, {{organization.country}}{{/if}}
+                </div>
+            {{/if}}
+        </footer>
+    </div>
+</body>
+</html>

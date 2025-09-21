@@ -47,7 +47,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       [idParam]
     )
 
-    return NextResponse.json(items)
+    return NextResponse.json({
+      success: true,
+      data: items
+    })
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error('Unknown error')
     return NextResponse.json({ error: err.message }, { status: 500 })

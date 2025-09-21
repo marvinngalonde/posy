@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
       [invoiceId]
     );
 
-    return NextResponse.json(items);
+    return NextResponse.json({
+      success: true,
+      data: items
+    });
   } catch (error: unknown) {
     console.error("Error fetching invoice items:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

@@ -22,6 +22,7 @@ export const invoicesApi = createApi({
     }),
     getInvoiceItems: builder.query<InvoiceItem[], string>({
       query: (invoiceId) => `/items?invoice_id=${invoiceId}`,
+      transformResponse: (response: { success: boolean; data: InvoiceItem[] }) => response.data || [],
       providesTags: (result, error, invoiceId) => [{
         type: 'InvoiceItem',
         id: invoiceId
@@ -41,7 +42,10 @@ export const invoicesApi = createApi({
         method: 'POST',
         body: newInvoice,
       }),
-      invalidatesTags: [{ type: 'Invoice', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'Invoice', id: 'LIST' },
+        ...(result?.id ? [{ type: 'Invoice' as const, id: result.id }, { type: 'InvoiceItem' as const, id: result.id }] : [])
+      ],
     }),
     updateInvoice: builder.mutation<Invoice, { id: string; data: Partial<Invoice> }>({
       query: ({ id, data }) => ({

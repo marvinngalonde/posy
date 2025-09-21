@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "Bash(npm run lint)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
