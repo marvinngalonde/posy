@@ -72,7 +72,7 @@ export default function PurchaseReturnsReport() {
         const res = await fetch('/api/purchases-return')
         if (!res.ok) throw new Error("Failed to fetch purchase returns")
         const data = await res.json()
-        setPurchaseReturns(data)
+        setPurchaseReturns(data.data || [])
       } catch (error) {
         toast.error("Failed to load purchase returns")
         console.error(error)
@@ -85,11 +85,11 @@ export default function PurchaseReturnsReport() {
   }, [])
 
   // Filter purchase returns based on search
-  const filteredReturns = purchaseReturns.filter(returnItem =>
+  const filteredReturns = Array.isArray(purchaseReturns) ? purchaseReturns.filter(returnItem =>
     returnItem.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   // Handle edit purchase return
   const handleEdit = async () => {
@@ -105,9 +105,9 @@ export default function PurchaseReturnsReport() {
       if (!res.ok) throw new Error("Failed to update purchase return")
       
       const updatedReturn = await res.json()
-      setPurchaseReturns(purchaseReturns.map(r => 
+      setPurchaseReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.map(r =>
         r.id === selectedReturn.id ? { ...r, ...updatedReturn } : r
-      ))
+      ) : [])
       setShowEditModal(false)
       resetForm()
       toast.success("Purchase return updated successfully")
@@ -128,7 +128,7 @@ export default function PurchaseReturnsReport() {
       
       if (!res.ok) throw new Error("Failed to delete purchase return")
       
-      setPurchaseReturns(purchaseReturns.filter(r => r.id !== selectedReturn.id))
+      setPurchaseReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.filter(r => r.id !== selectedReturn.id) : [])
       setShowDeleteModal(false)
       toast.success("Purchase return deleted successfully")
     } catch (error) {

@@ -72,7 +72,7 @@ export default function SalesReturnsReport() {
         const res = await fetch('/api/sales-returns')
         if (!res.ok) throw new Error("Failed to fetch sales returns")
         const data = await res.json()
-        setSalesReturns(data)
+        setSalesReturns(data.data || [])
       } catch (error) {
         toast.error("Failed to load sales returns")
         console.error(error)
@@ -85,11 +85,11 @@ export default function SalesReturnsReport() {
   }, [])
 
   // Filter sales returns based on search
-  const filteredReturns = salesReturns.filter(returnItem =>
+  const filteredReturns = Array.isArray(salesReturns) ? salesReturns.filter(returnItem =>
     returnItem.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     returnItem.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   // Handle edit sales return
   const handleEdit = async () => {
@@ -105,9 +105,9 @@ export default function SalesReturnsReport() {
       if (!res.ok) throw new Error("Failed to update sales return")
       
       const updatedReturn = await res.json()
-      setSalesReturns(salesReturns.map(r => 
+      setSalesReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.map(r =>
         r.id === selectedReturn.id ? { ...r, ...updatedReturn } : r
-      ))
+      ) : [])
       setShowEditModal(false)
       resetForm()
       toast.success("Sales return updated successfully")
@@ -128,7 +128,7 @@ export default function SalesReturnsReport() {
       
       if (!res.ok) throw new Error("Failed to delete sales return")
       
-      setSalesReturns(salesReturns.filter(r => r.id !== selectedReturn.id))
+      setSalesReturns(prevReturns => Array.isArray(prevReturns) ? prevReturns.filter(r => r.id !== selectedReturn.id) : [])
       setShowDeleteModal(false)
       toast.success("Sales return deleted successfully")
     } catch (error) {
