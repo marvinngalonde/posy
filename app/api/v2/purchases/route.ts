@@ -31,12 +31,12 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
       const purchase = await prisma.purchases.findUnique({
         where: { id: parseInt(id) },
         include: {
-          supplier: { select: { id: true, name: true, email: true, phone: true } },
-          warehouse: { select: { id: true, name: true } },
-          createdBy: { select: { id: true, name: true } },
-          items: {
+          suppliers: { select: { id: true, name: true, email: true, phone: true } },
+          warehouses: { select: { id: true, name: true } },
+          users: { select: { id: true, name: true } },
+          purchase_items: {
             include: {
-              product: { select: { id: true, name: true, code: true } }
+              products: { select: { id: true, name: true, code: true } }
             }
           }
         }
@@ -96,12 +96,12 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
         take: limit,
         orderBy: { date: "desc" },
         include: {
-          supplier: { select: { name: true } },
-          warehouse: { select: { name: true } },
-          createdBy: { select: { name: true } },
+          suppliers: { select: { name: true } },
+          warehouses: { select: { name: true } },
+          users: { select: { name: true } },
           _count: {
             select: {
-              items: true
+              purchase_items: true
             }
           }
         }
@@ -232,8 +232,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Purchase 
           created_by: created_by || 1
         },
         include: {
-          supplier: { select: { name: true } },
-          warehouse: { select: { name: true } }
+          suppliers: { select: { name: true } },
+          warehouses: { select: { name: true } }
         }
       })
 
@@ -324,7 +324,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Purchase |
     // Check if purchase exists
     const existingPurchase = await prisma.purchases.findUnique({
       where: { id: parseInt(id) },
-      include: { items: true }
+      include: { purchase_items: true }
     })
 
     if (!existingPurchase) {
@@ -365,8 +365,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse<Purchase |
           updated_at: new Date()
         },
         include: {
-          supplier: { select: { name: true } },
-          warehouse: { select: { name: true } }
+          suppliers: { select: { name: true } },
+          warehouses: { select: { name: true } }
         }
       })
 
@@ -421,7 +421,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Purchase
     // Check if purchase exists
     const existingPurchase = await prisma.purchases.findUnique({
       where: { id: parseInt(id) },
-      include: { items: true }
+      include: { purchase_items: true }
     })
 
     if (!existingPurchase) {
@@ -450,11 +450,11 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Purchase
         where: { id: parseInt(id) },
         data: updateData,
         include: {
-          supplier: { select: { name: true } },
-          warehouse: { select: { name: true } },
-          items: {
+          suppliers: { select: { name: true } },
+          warehouses: { select: { name: true } },
+          purchase_items: {
             include: {
-              product: { select: { name: true, code: true } }
+              products: { select: { name: true, code: true } }
             }
           }
         }
@@ -465,7 +465,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Purchase
         if (oldStatus !== 'received' && newStatus === 'received') {
           // Add stock when changing to received
           await Promise.all(
-            existingPurchase.items.map(item =>
+            existingPurchase.purchase_items.map(item =>
               tx.products.update({
                 where: { id: item.product_id },
                 data: { stock: { increment: item.quantity } }
@@ -475,7 +475,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse<Purchase
         } else if (oldStatus === 'received' && newStatus !== 'received') {
           // Remove stock when changing from received
           await Promise.all(
-            existingPurchase.items.map(item =>
+            existingPurchase.purchase_items.map(item =>
               tx.products.update({
                 where: { id: item.product_id },
                 data: { stock: { decrement: item.quantity } }
@@ -518,7 +518,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
     const existingPurchase = await prisma.purchases.findUnique({
       where: { id: parseInt(id) },
       include: {
-        items: true,
+        purchase_items: true,
         purchase_returns: { select: { id: true } }
       }
     })
@@ -543,7 +543,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<ApiResp
       // If purchase was received, adjust stock back
       if (existingPurchase.status === 'received') {
         await Promise.all(
-          existingPurchase.items.map(item =>
+          existingPurchase.purchase_items.map(item =>
             tx.products.update({
               where: { id: item.product_id },
               data: { stock: { decrement: item.quantity } }

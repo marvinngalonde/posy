@@ -19,7 +19,7 @@ interface Product {
   name: string
   code: string
   cost: number
-  quantity: number
+  stock: number
 }
 
 interface PurchaseItem {
@@ -55,8 +55,8 @@ export default function CreatePurchase() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [selectedProducts, setSelectedProducts] = useState<PurchaseItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [suppliers, setSuppliers] = useState<{id: string, name: string}[]>([])
-  const [warehouses, setWarehouses] = useState<{id: string, name: string}[]>([])
+  const [suppliers, setSuppliers] = useState<{id: number, name: string}[]>([])
+  const [warehouses, setWarehouses] = useState<{id: number, name: string}[]>([])
 
   const {
     register,
@@ -86,7 +86,7 @@ export default function CreatePurchase() {
       try {
         setIsLoading(true)
         const [suppliersRes, warehousesRes] = await Promise.all([
-          fetch('/api/v2/suppliers'),
+          fetch('/api/v2/suppliers?limit=1000'),
           fetch('/api/settings/warehouses')
         ])
         
@@ -120,11 +120,12 @@ export default function CreatePurchase() {
       }
 
       try {
-        const res = await fetch(`/api/products?search=${searchQuery}`)
+        const res = await fetch(`/api/products?search=${searchQuery}&limit=10`)
         if (!res.ok) throw new Error('Failed to search products')
         const data = await res.json()
-        // setProducts(data)
-        setFilteredProducts(data.slice(0, 5))
+        // Handle both paginated and direct array responses
+        const products = data.data || data
+        setFilteredProducts(products.slice(0, 5))
       } catch (error) {
         toast.error("Failed to search products")
         console.error(error)
@@ -222,16 +223,25 @@ export default function CreatePurchase() {
     try {
       const payload = {
         ...data,
+        supplier_id: parseInt(data.supplier_id),
+        warehouse_id: parseInt(data.warehouse_id),
         subtotal,
         tax_amount,
         total,
         paid: 0,
         due: total,
-        items: selectedProducts,
-        created_by: user_id,
+        items: selectedProducts.map(item => ({
+          product_id: parseInt(item.product_id),
+          quantity: item.quantity,
+          unit_cost: item.unit_cost,
+          discount: item.discount,
+          tax: item.tax,
+          subtotal: item.subtotal
+        })),
+        created_by: parseInt(user_id),
       }
 
-      const response = await fetch('/api/purchases', {
+      const response = await fetch('/api/v2/purchases', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,7 +307,7 @@ export default function CreatePurchase() {
                           </SelectTrigger>
                           <SelectContent>
                             {suppliers.map(supplier => (
-                              <SelectItem key={supplier.id} value={supplier.id}>
+                              <SelectItem key={supplier.id} value={supplier.id.toString()}>
                                 {supplier.name}
                               </SelectItem>
                             ))}
@@ -323,7 +333,7 @@ export default function CreatePurchase() {
                           </SelectTrigger>
                           <SelectContent>
                             {warehouses.map(warehouse => (
-                              <SelectItem key={warehouse.id} value={warehouse.id}>
+                              <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
                                 {warehouse.name}
                               </SelectItem>
                             ))}
@@ -369,7 +379,7 @@ export default function CreatePurchase() {
                           </div>
                           <div className="text-sm">
                             ${product.cost}
-                            <span className="ml-2 text-gray-500">Stock: {product.quantity}</span>
+                            <span className="ml-2 text-gray-500">Stock: {product.stock}</span>
                           </div>
                         </div>
                       ))}

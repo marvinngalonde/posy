@@ -17,6 +17,7 @@ import { useGetCategoriesQuery, useGetBrandsQuery, useGetWarehousesQuery } from 
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
 import { useCreateSaleMutation } from "@/lib/slices/salesApi" // Import useCreateSaleMutation
+import { useGetOrganizationQuery } from "@/lib/slices/organizationApi"
 import { toast } from "sonner" // Import toast for notifications
 
 
@@ -103,6 +104,7 @@ export default function POSSystem() {
   const { data: warehousesData, isLoading: warehousesLoading } = useGetWarehousesQuery()
   const { data: customersResponse, isLoading: customersLoading } = useGetCustomersQuery({ page: 1, limit: 1000, search: "" })
   const { data: productsResponse, isLoading: productsLoading } = useGetProductsQuery({ page: 1, limit: 1000 })
+  const { data: organizationData, isLoading: organizationLoading } = useGetOrganizationQuery()
   const productsData = productsResponse?.data || []
 
   // RTK Query Mutations
@@ -234,11 +236,24 @@ export default function POSSystem() {
   const handlePrintReceipt = () => {
     const receiptWindow = window.open("", "_blank")
     if (receiptWindow) {
+      // Get organization details or use defaults
+      const orgName = organizationData?.name || "Your Company Name"
+      const orgAddress = organizationData?.address || ""
+      const orgCity = organizationData?.city || ""
+      const orgCountry = organizationData?.country || ""
+      const orgEmail = organizationData?.email || ""
+      const orgPhone = organizationData?.phone || ""
+      const currencySymbol = organizationData?.currency_symbol || "$"
+
+      // Format full address
+      const fullAddress = [orgAddress, orgCity, orgCountry].filter(Boolean).join(", ")
+      const customerName = selectedCustomer?.name || "Walk-In Customer"
+
       receiptWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Receipt -  Global</title>
+          <title>Receipt - ${orgName}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
             .header { text-align: center; margin-bottom: 20px; }
@@ -255,13 +270,13 @@ export default function POSSystem() {
         </head>
         <body>
           <div class="header">
-            <div class="company-name"> Global</div>
+            <div class="company-name">${orgName}</div>
             <div class="company-info">
-              Date : ${new Date().toLocaleDateString()}<br>
-              Address : 53 Karigamombe Centre, Harare<br>
-              Email : Admin@.Com<br>
-              Phone : 0774882645<br>
-              Customer : Walk-In-Customer
+              Date: ${new Date().toLocaleDateString()}<br>
+              ${fullAddress ? `Address: ${fullAddress}<br>` : ''}
+              ${orgEmail ? `Email: ${orgEmail}<br>` : ''}
+              ${orgPhone ? `Phone: ${orgPhone}<br>` : ''}
+              Customer: ${customerName}
             </div>
           </div>
           <div class="divider"></div>
@@ -270,23 +285,23 @@ export default function POSSystem() {
               <span>${item.name}</span>
             </div>
             <div class="item-row">
-              <span>${item.quantity} Pcs X ${item.price}</span>
-              <span>${(item.quantity * item.price)}</span>
+              <span>${item.quantity} Pcs X ${currencySymbol}${item.price}</span>
+              <span>${currencySymbol}${(item.quantity * item.price)}</span>
             </div>
           `).join('')}
           <div class="divider"></div>
           <div class="total-section">
             <div class="item-row">
               <span>Order Tax</span>
-              <span>USD ${tax} (${tax > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
+              <span>${currencySymbol}${tax} (${tax > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
             </div>
             <div class="item-row">
               <span>Discount</span>
-              <span>USD ${discount}</span>
+              <span>${currencySymbol}${discount}</span>
             </div>
             <div class="item-row grand-total">
               <span>Grand Total</span>
-              <span>USD ${grandTotal}</span>
+              <span>${currencySymbol}${grandTotal}</span>
             </div>
           </div>
           <div class="divider"></div>
@@ -298,12 +313,12 @@ export default function POSSystem() {
             </div>
             <div class="item-row">
               <span>${paymentChoice}</span>
-              <span>${payingAmount}</span>
-              <span>${change}</span>
+              <span>${currencySymbol}${payingAmount}</span>
+              <span>${currencySymbol}${change}</span>
             </div>
           </div>
           <div class="footer">
-            <p>Thank You For Shopping With Us . Please Come Again</p>
+            <p>${organizationData?.terms_conditions || "Thank You For Shopping With Us. Please Come Again"}</p>
             <div class="barcode">
               ||||| |||| | ||| ||||<br>
               ${Date.now().toString().slice(-6)}
@@ -745,20 +760,20 @@ export default function POSSystem() {
               <div className="flex justify-between">
                 <span>Order Tax</span>
                 <span>
-                  $ {tax} ({((tax / subtotal) * 100).toFixed(0)} %)
+                  {organizationData?.currency_symbol || "$"} {tax} ({((tax / subtotal) * 100).toFixed(0)} %)
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Discount</span>
-                <span>$ {discount}</span>
+                <span>{organizationData?.currency_symbol || "$"} {discount}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>$ {shipping}</span>
+                <span>{organizationData?.currency_symbol || "$"} {shipping}</span>
               </div>
               <div className="flex justify-between font-bold text-lg  ">
                 <span>Grand Total</span>
-                <span>$ {grandTotal}</span>
+                <span>{organizationData?.currency_symbol || "$"} {grandTotal}</span>
               </div>
             </div>
           </div>
@@ -773,13 +788,13 @@ export default function POSSystem() {
           </DialogHeader>
           <div className="p-4 space-y-4">
             <div className="text-center">
-              <h2 className="text-xl font-bold"> Global</h2>
+              <h2 className="text-xl font-bold">{organizationData?.name || "Your Company Name"}</h2>
               <div className="text-sm text-gray-600 mt-2">
-                <p>Date : {new Date().toLocaleDateString()}</p>
-                <p>Address : 53 Karigamombe Centre, Harare</p>
-                <p>Email : Admin@.Com</p>
-                <p>Phone : 0774882645</p>
-                <p>Customer : Walk-In-Customer</p>
+                <p>Date: {new Date().toLocaleDateString()}</p>
+                {organizationData?.address && <p>Address: {[organizationData.address, organizationData.city, organizationData.country].filter(Boolean).join(", ")}</p>}
+                {organizationData?.email && <p>Email: {organizationData.email}</p>}
+                {organizationData?.phone && <p>Phone: {organizationData.phone}</p>}
+                <p>Customer: {selectedCustomer === "walkin" || !selectedCustomer ? "Walk-In Customer" : customersResponse?.data?.find(c => c.id.toString() === selectedCustomer)?.name || "Walk-In Customer"}</p>
               </div>
             </div>
 
@@ -788,8 +803,8 @@ export default function POSSystem() {
                 <div key={item.id} className="space-y-2">
                   <p className="font-medium">{item.name}</p>
                   <div className="flex justify-between">
-                    <span>{item.quantity} Pcs X {item.price}</span>
-                    <span>{(item.quantity * item.price)}</span>
+                    <span>{item.quantity} Pcs X {organizationData?.currency_symbol || "$"}{item.price}</span>
+                    <span>{organizationData?.currency_symbol || "$"}{(item.quantity * item.price)}</span>
                   </div>
                 </div>
               ))}
@@ -798,15 +813,15 @@ export default function POSSystem() {
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between">
                 <span>Order Tax</span>
-                <span>USD {tax} ({subtotal > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
+                <span>{organizationData?.currency_symbol || "$"} {tax} ({subtotal > 0 ? ((tax / subtotal) * 100).toFixed(0) : 0} %)</span>
               </div>
               <div className="flex justify-between">
                 <span>Discount</span>
-                <span>USD {discount}</span>
+                <span>{organizationData?.currency_symbol || "$"} {discount}</span>
               </div>
               <div className="flex justify-between font-bold">
                 <span>Grand Total</span>
-                <span>USD {grandTotal}</span>
+                <span>{organizationData?.currency_symbol || "$"} {grandTotal}</span>
               </div>
             </div>
 
@@ -818,18 +833,17 @@ export default function POSSystem() {
                 </div>
                 <div>
                   <p className="font-medium">Amount:</p>
-                  <p>{payingAmount}</p>
+                  <p>{organizationData?.currency_symbol || "$"}{payingAmount}</p>
                 </div>
                 <div>
                   <p className="font-medium">Change:</p>
-                  <p>{change}</p>
+                  <p>{organizationData?.currency_symbol || "$"}{change}</p>
                 </div>
               </div>
             </div>
 
             <div className="text-center text-sm">
-              <p>Thank You For Shopping With Us .</p>
-              <p>Please Come Again</p>
+              <p>{organizationData?.terms_conditions || "Thank You For Shopping With Us. Please Come Again"}</p>
               <div className="mt-4 font-mono">
                 <div className="text-lg">||||| |||| | ||| ||||</div>
                 <div>{Date.now().toString().slice(-6)}</div>

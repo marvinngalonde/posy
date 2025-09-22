@@ -37,13 +37,26 @@ interface Purchase {
   id: string
   date: string
   reference: string
-  supplier_name: string
-  warehouse_name: string
+  suppliers: { name: string }
+  warehouses: { name: string }
   status: string
   total: number
   paid: number
   due: number
   payment_status: string
+  purchase_items?: Array<{
+    id: number
+    quantity: number
+    unit_cost: number
+    subtotal: number
+    products: { name: string, code: string }
+  }>
+  subtotal?: number
+  tax_rate?: number
+  tax_amount?: number
+  discount?: number
+  shipping?: number
+  notes?: string
 }
 
 export default function PurchaseList() {
@@ -89,8 +102,8 @@ export default function PurchaseList() {
     const tableData = purchases.map(purchase => [
       formatDate(purchase.date),
       purchase.reference,
-      purchase.supplier_name,
-      purchase.warehouse_name,
+      purchase.suppliers?.name || 'N/A',
+      purchase.warehouses?.name || 'N/A',
       purchase.status,
       Number(purchase.total),
       Number(purchase.paid),
@@ -114,8 +127,8 @@ export default function PurchaseList() {
       purchases.map(purchase => ({
         Date: formatDate(purchase.date),
         Reference: purchase.reference,
-        Supplier: purchase.supplier_name,
-        Warehouse: purchase.warehouse_name,
+        Supplier: purchase.suppliers?.name || 'N/A',
+        Warehouse: purchase.warehouses?.name || 'N/A',
         Status: purchase.status,
         Total: Number(purchase.total),
         Paid: Number(purchase.paid),
@@ -252,8 +265,8 @@ export default function PurchaseList() {
                       <tr key={purchase.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleRowClick(purchase.id)}>
                         <td className="p-3">{formatDate(purchase.date)}</td>
                         <td className="p-3 font-medium">{purchase.reference}</td>
-                        <td className="p-3">{purchase.supplier_name}</td>
-                        <td className="p-3">{purchase.warehouse_name}</td>
+                        <td className="p-3">{purchase.suppliers?.name || 'N/A'}</td>
+                        <td className="p-3">{purchase.warehouses?.name || 'N/A'}</td>
                         <td className="p-3">{getStatusBadge(purchase.status)}</td>
                         <td className="p-3 font-medium">${Number(purchase.total) }</td>
                         <td className="p-3">${Number(purchase.paid) }</td>

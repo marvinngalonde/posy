@@ -5,11 +5,75 @@ import type { CreateSaleInput, UpdateSaleInput, SaleSearchParams } from "@/lib/t
 export async function POST(req: NextRequest) {
   try {
     const body: CreateSaleInput = await req.json()
+
+    // Ensure we have a valid user ID
+    let validCreatedBy = body.created_by ? parseInt(body.created_by.toString()) : null
+    if (!validCreatedBy) {
+      // Try to find the first admin user
+      const adminUser = await prisma.users.findFirst({
+        where: { role: 'admin' }
+      })
+      if (adminUser) {
+        validCreatedBy = adminUser.id
+      } else {
+        // If no admin user exists, try to find any user
+        const anyUser = await prisma.users.findFirst()
+        if (anyUser) {
+          validCreatedBy = anyUser.id
+        } else {
+          return NextResponse.json(
+            { error: 'No valid user found. Please ensure at least one user exists in the system.' },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
+    // Ensure we have a valid customer ID
+    let validCustomerId = body.customer_id ? parseInt(body.customer_id.toString()) : null
+    if (!validCustomerId) {
+      // Try to find a default customer or create one
+      let defaultCustomer = await prisma.customers.findFirst({
+        where: { name: 'Walk-in Customer' }
+      })
+
+      if (!defaultCustomer) {
+        // Create a default walk-in customer
+        defaultCustomer = await prisma.customers.create({
+          data: {
+            name: 'Walk-in Customer',
+            email: null,
+            phone: null,
+            address: null,
+            status: 'active'
+          }
+        })
+      }
+      validCustomerId = defaultCustomer.id
+    }
+
+    // Ensure we have a valid warehouse ID
+    let validWarehouseId = body.warehouse_id ? parseInt(body.warehouse_id.toString()) : null
+    if (!validWarehouseId) {
+      // Try to find the first warehouse
+      const firstWarehouse = await prisma.warehouses.findFirst({
+        where: { status: 'active' }
+      })
+
+      if (!firstWarehouse) {
+        return NextResponse.json(
+          { error: 'No active warehouse found. Please ensure at least one warehouse exists in the system.' },
+          { status: 400 }
+        )
+      }
+      validWarehouseId = firstWarehouse.id
+    }
+
     const sale = await prisma.sales.create({
       data: {
         reference: body.reference || `SL-${Date.now()}`,
-        customer_id: body.customer_id ? parseInt(body.customer_id.toString()) : null,
-        warehouse_id: body.warehouse_id ? parseInt(body.warehouse_id.toString()) : null,
+        customer_id: validCustomerId,
+        warehouse_id: validWarehouseId,
         date: new Date(body.date),
         subtotal: body.subtotal ?? 0,
         tax_rate: body.tax_rate ?? 0,
@@ -22,7 +86,7 @@ export async function POST(req: NextRequest) {
         status: body.status || "completed",
         payment_status: body.payment_status || "paid",
         notes: body.notes ?? null,
-        created_by: body.created_by ?? null,
+        created_by: validCreatedBy,
         sale_items: {
           create: body.items?.map(item => ({
             product_id: parseInt(item.product_id?.toString() || '0'),
@@ -36,8 +100,8 @@ export async function POST(req: NextRequest) {
       },
       include: {
         sale_items: true,
-        customer: true,
-        warehouse: true
+        customers: true,
+        warehouses: true
       }
     })
 
@@ -78,8 +142,8 @@ export async function GET(req: NextRequest) {
       const sale = await prisma.sales.findUnique({
         where: { id: parseInt(id) },
         include: {
-          customer: { select: { name: true, email: true, phone: true } },
-          warehouse: { select: { name: true } },
+          customers: { select: { name: true, email: true, phone: true } },
+          warehouses: { select: { name: true } },
           sale_items: {
             include: {
               product: { select: { name: true, sku: true } }
@@ -120,8 +184,8 @@ export async function GET(req: NextRequest) {
         skip: offset,
         take: limit,
         include: {
-          customer: { select: { name: true, email: true } },
-          warehouse: { select: { name: true } },
+          customers: { select: { name: true, email: true } },
+          warehouses: { select: { name: true } },
           sale_items: { select: { quantity: true, unit_price: true, subtotal: true } }
         },
         orderBy,
@@ -176,12 +240,12 @@ export async function PUT(req: NextRequest) {
         status: body.status,
         payment_status: body.payment_status,
         notes: body.notes,
-        created_by: body.created_by,
+        created_by: body.created_by ? parseInt(body.created_by.toString()) : undefined,
       },
       include: {
         sale_items: true,
-        customer: true,
-        warehouse: true
+        customers: true,
+        warehouses: true
       }
     })
 
@@ -234,8 +298,8 @@ export async function PATCH(req: NextRequest) {
       data: body,
       include: {
         sale_items: true,
-        customer: true,
-        warehouse: true
+        customers: true,
+        warehouses: true
       }
     })
 

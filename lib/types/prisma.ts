@@ -226,11 +226,11 @@ export type UpdateSaleInput = Partial<CreateSaleInput>
 // Purchase types
 export type Purchase = Prisma.purchasesGetPayload<{
   include: {
-    supplier: { select: { name: true } }
-    warehouse: { select: { name: true } }
-    items: {
+    suppliers: { select: { name: true } }
+    warehouses: { select: { name: true } }
+    purchase_items: {
       include: {
-        product: { select: { name: true, code: true } }
+        products: { select: { name: true, code: true } }
       }
     }
   }
@@ -238,7 +238,7 @@ export type Purchase = Prisma.purchasesGetPayload<{
 
 export type PurchaseItem = Prisma.purchase_itemsGetPayload<{
   include: {
-    product: { select: { name: true, code: true } }
+    products: { select: { name: true, code: true } }
   }
 }>
 

@@ -63,7 +63,7 @@ export default function SaleReport() {
         const res = await fetch('/api/pos/sales')
         if (!res.ok) throw new Error("Failed to fetch sales")
         const data = await res.json()
-        setSales(data)
+        setSales(data.data || [])
       } catch (error) {
         toast.error("Failed to load sales")
         console.error(error)
@@ -76,11 +76,11 @@ export default function SaleReport() {
   }, [])
 
   // Filter sales based on search
-  const filteredSales = sales.filter(sale =>
+  const filteredSales = Array.isArray(sales) ? sales.filter(sale =>
     sale.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sale.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sale.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   // Handle edit sale
   const handleEdit = async () => {
@@ -96,9 +96,9 @@ export default function SaleReport() {
       if (!res.ok) throw new Error("Failed to update sale")
       
       const updatedSale = await res.json()
-      setSales(sales.map(s => 
+      setSales(prevSales => Array.isArray(prevSales) ? prevSales.map(s =>
         s.id === selectedSale.id ? { ...s, ...updatedSale } : s
-      ))
+      ) : [])
       setShowEditModal(false)
       resetForm()
       toast.success("Sale updated successfully")
@@ -119,7 +119,7 @@ export default function SaleReport() {
       
       if (!res.ok) throw new Error("Failed to delete sale")
       
-      setSales(sales.filter(s => s.id !== selectedSale.id))
+      setSales(prevSales => Array.isArray(prevSales) ? prevSales.filter(s => s.id !== selectedSale.id) : [])
       setShowDeleteModal(false)
       toast.success("Sale deleted successfully")
     } catch (error) {

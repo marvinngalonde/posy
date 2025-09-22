@@ -35,11 +35,11 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500">Supplier</h3>
-              <p>{purchase.supplier_name}</p>
+              <p>{purchase.suppliers?.name || 'N/A'}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500">Warehouse</h3>
-              <p>{purchase.warehouse_name}</p>
+              <p>{purchase.warehouses?.name || 'N/A'}</p>
             </div>
           </div>
 
@@ -54,11 +54,11 @@ export function ViewPurchaseDialog({ purchase, open, onOpenChange }: ViewPurchas
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {purchase.items?.map((item) => (
+                {purchase.purchase_items?.map((item) => (
                   <TableRow key={item.id} className="hover:bg-gray-50">
                     <TableCell>
-                      <div className="font-medium">{item.product_name}</div>
-                      <div className="text-sm text-gray-500">{item.product_code}</div>
+                      <div className="font-medium">{item.products?.name || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{item.products?.code || 'N/A'}</div>
                     </TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
                     <TableCell className="text-right">${Number(item.unit_cost).toFixed(2)}</TableCell>

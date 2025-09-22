@@ -63,7 +63,7 @@ export default function PurchaseReport() {
         const res = await fetch('/api/purchases')
         if (!res.ok) throw new Error("Failed to fetch purchases")
         const data = await res.json()
-        setPurchases(data)
+        setPurchases(data.data || [])
       } catch (error) {
         toast.error("Failed to load purchases")
         console.error(error)
@@ -76,11 +76,11 @@ export default function PurchaseReport() {
   }, [])
 
   // Filter purchases based on search
-  const filteredPurchases = purchases.filter(purchase =>
+  const filteredPurchases = Array.isArray(purchases) ? purchases.filter(purchase =>
     purchase.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     purchase.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ) : []
 
   // Handle edit purchase
   const handleEdit = async () => {
@@ -96,9 +96,9 @@ export default function PurchaseReport() {
       if (!res.ok) throw new Error("Failed to update purchase")
       
       const updatedPurchase = await res.json()
-      setPurchases(purchases.map(p => 
+      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.map(p =>
         p.id === selectedPurchase.id ? { ...p, ...updatedPurchase } : p
-      ))
+      ) : [])
       setShowEditModal(false)
       resetForm()
       toast.success("Purchase updated successfully")
@@ -119,7 +119,7 @@ export default function PurchaseReport() {
       
       if (!res.ok) throw new Error("Failed to delete purchase")
       
-      setPurchases(purchases.filter(p => p.id !== selectedPurchase.id))
+      setPurchases(prevPurchases => Array.isArray(prevPurchases) ? prevPurchases.filter(p => p.id !== selectedPurchase.id) : [])
       setShowDeleteModal(false)
       toast.success("Purchase deleted successfully")
     } catch (error) {
