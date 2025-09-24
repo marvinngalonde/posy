@@ -18,6 +18,22 @@ import {
   Maximize2, Minimize2,
   ChevronRight,
   ChevronDown,
+  Home,
+  TrendingUp,
+  Warehouse,
+  CreditCard,
+  UserCheck,
+  RefreshCw,
+  Building,
+  Calculator,
+  Receipt,
+  Truck,
+  Briefcase,
+  Database,
+  Shield,
+  LogOut,
+  HelpCircle,
+  Zap
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
@@ -25,6 +41,7 @@ import { useAppDispatch } from "@/lib/hooks"
 import { logout } from "@/lib/slices/authSlice"
 import AuthGuard from "./AuthGuard"
 import { useGetSystemSettingsQuery } from "@/lib/slices/settingsApi"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
 type IconType =| typeof BarChart3 | typeof Package | typeof Settings | typeof FileText | typeof ShoppingCart | typeof Users | typeof ArrowLeftRight | typeof DollarSign | typeof RotateCcw | typeof Menu | typeof Bell | typeof Maximize2 | typeof Minimize2 | typeof ChevronRight | typeof ChevronDown;  
 type UserRole = 'admin' | 'user';
@@ -33,29 +50,62 @@ const menuItems = [
   {
     id: "dashboard",
     label: "Dashboard",
-    icon: BarChart3,
+    icon: Home,
     href: "/dashboard",
-    roles: ['admin', 'user']
+    roles: ['admin', 'user'],
+    category: "main"
+  },
+  {
+    id: "pos",
+    label: "Point of Sale",
+    icon: Zap,
+    href: "/pos",
+    roles: ['admin', 'user'],
+    category: "main",
+    badge: "Quick Sale"
   },
   {
     id: "products",
     label: "Products",
     icon: Package,
     roles: ['admin'],
+    category: "inventory",
     submenu: [
-      { label: "Create Product", href: "/products/create" },
-      { label: "Product List", href: "/products/list" },
-      
+      { label: "Create Product", href: "/products/create", icon: "plus" },
+      { label: "Product List", href: "/products/list", icon: "list" },
     ],
   },
   {
     id: "adjustment",
-    label: "Adjustment",
-    icon: Settings,
+    label: "Stock Adjustment",
+    icon: RefreshCw,
     roles: ['admin'],
+    category: "inventory",
     submenu: [
       { label: "Create Adjustment", href: "/adjustment/create" },
       { label: "Adjustment List", href: "/adjustment/list" },
+    ],
+  },
+  {
+    id: "sales",
+    label: "Sales",
+    icon: TrendingUp,
+    roles: ['admin', 'user'],
+    category: "transactions",
+    submenu: [
+      { label: "Create Sale", href: "/sales/create", roles: ['admin'] },
+      { label: "Sale List", href: "/sales/list" },
+    ],
+  },
+  {
+    id: "purchases",
+    label: "Purchases",
+    icon: Truck,
+    roles: ['admin'],
+    category: "transactions",
+    submenu: [
+      { label: "Create Purchase", href: "/purchases/create" },
+      { label: "Purchase List", href: "/purchases/list" },
     ],
   },
   {
@@ -63,55 +113,30 @@ const menuItems = [
     label: "Quotations",
     icon: FileText,
     roles: ['admin'],
+    category: "documents",
     submenu: [
       { label: "Create Quotation", href: "/quotations/create" },
       { label: "Quotation List", href: "/quotations/list" },
     ],
   },
   {
-    id: "purchases",
-    label: "Purchases",
-    icon: ShoppingCart,
-    roles: ['admin'],
-    submenu: [
-      { label: "Create Purchase", href: "/purchases/create" },
-      { label: "Purchase List", href: "/purchases/list" },
-    ],
-  },
-  {
-    id: "sales",
-    label: "Sales",
-    icon: DollarSign,
-    roles: ['admin', 'user'],
-    submenu: [
-      { label: "Create Sale", href: "/sales/create", roles: ['admin'] },
-      { label: "Sale List", href: "/sales/list" },
-    ],
-  },
-  {
     id: "invoices",
     label: "Invoices",
-    icon: FileText,
-    roles: ['admin'], // Assuming only admin can manage invoices initially
+    icon: Receipt,
+    roles: ['admin'],
+    category: "documents",
     submenu: [
       { label: "Create Invoice", href: "/invoice/create" },
       { label: "Invoice List", href: "/invoice/list" },
     ],
   },
   {
-    id: "pos",
-    label: "POS",
-    icon: ShoppingCart,
-    href: "/pos",
-    roles: ['admin', 'user']
-  },
-  {
     id: "expenses",
     label: "Expenses",
-    icon: DollarSign,
+    icon: CreditCard,
     roles: ['admin'],
+    category: "financial",
     submenu: [
-   
       { label: "Expense List", href: "/expenses/list" },
       { label: "Expense Category", href: "/expenses/category" },
     ],
@@ -121,6 +146,7 @@ const menuItems = [
     label: "Sales Return",
     icon: RotateCcw,
     roles: ['admin'],
+    category: "transactions",
     submenu: [
       { label: "Create Sales Return", href: "/sales-return/create" },
       { label: "Sales Return List", href: "/sales-return/list" },
@@ -128,29 +154,43 @@ const menuItems = [
   },
   {
     id: "purchases-return",
-    label: "Purchases Return",
+    label: "Purchase Return",
     icon: RotateCcw,
     roles: ['admin'],
+    category: "transactions",
     submenu: [
       { label: "Create Purchase Return", href: "/purchases-return/create" },
       { label: "Purchase Return List", href: "/purchases-return/list" },
     ],
   },
   {
+    id: "transfer",
+    label: "Stock Transfer",
+    icon: ArrowLeftRight,
+    roles: ['admin', 'user'],
+    category: "inventory",
+    submenu: [
+      { label: "Create Transfer", href: "/transfer/create" },
+      { label: "Transfer List", href: "/transfer/list" },
+    ],
+  },
+  {
     id: "people",
-    label: "People",
+    label: "Contacts",
     icon: Users,
     roles: ['admin', 'user'],
+    category: "management",
     submenu: [
-      { label: "Customer List", href: "/people/customers" },
-      { label: "Supplier List", href: "/people/suppliers", roles: ['admin'] },
+      { label: "Customers", href: "/people/customers" },
+      { label: "Suppliers", href: "/people/suppliers", roles: ['admin'] },
     ],
   },
   {
     id: "hrm",
-    label: "HRM",
-    icon: Users,
+    label: "Human Resources",
+    icon: UserCheck,
     roles: ['admin', 'user'],
+    category: "management",
     submenu: [
       { label: "Attendance", href: "/hrm/attendance" },
       { label: "Company", href: "/hrm/company" },
@@ -163,69 +203,36 @@ const menuItems = [
     ],
   },
   {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    roles: ['admin'],
-    submenu: [
-      { label: "Warehouse", href: "/settings/warehouses" },
-      { label: "Category", href: "/settings/categories" },
-      { label: "Brand", href: "/settings/brands" },
-      { label: "Currency", href: "/settings/currencies" },
-      { label: "Unit", href: "/settings/units" },
-      { label: "Backup", href: "/settings/backup" },
-      { label: "Systems", href: "/settings/systems" },
-    ],
-  },
-  {
     id: "reports",
-    label: "Reports",
+    label: "Reports & Analytics",
     icon: BarChart3,
     roles: ['admin'],
+    category: "analytics",
     submenu: [
-      {
-        label: "Payments",
-        href: "#",
-        submenu: [
-          { label: "Sales", href: "/reports/payments/sales" },
-          { label: "Purchases", href: "/reports/payments/purchases" },
-          { label: "Sales Returns", href: "/reports/payments/sales-returns" },
-          { label: "Purchase Returns", href: "/reports/payments/purchase-returns" },
-        ],
-      },
-      { label: "Profit and Loss", href: "/reports/profit-loss" },
-      { label: "Product Quantity Alerts", href: "/reports/quantity-alerts" },
-      { label: "Warehouse Report", href: "/reports/warehouse" },
-      {
-        label: "Sale Report",
-        href: "/reports/sales",
-        submenu: [
-          { label: "Sales", href: "/reports/sales" },
-          { label: "Sales Returns", href: "/reports/sales-returns" },
-        ],
-      },
-      {
-        label: "Purchase Report",
-        href: "/reports/purchases",
-        submenu: [
-          { label: "Purchases", href: "/reports/purchases" },
-          { label: "Purchase Returns", href: "/reports/purchase-returns" },
-        ],
-      },
+      { label: "Sales Report", href: "/reports/sales" },
+      { label: "Purchase Report", href: "/reports/purchases" },
+      { label: "Profit & Loss", href: "/reports/profit-loss" },
+      { label: "Inventory Alerts", href: "/reports/quantity-alerts" },
       { label: "Customer Report", href: "/reports/customers" },
       { label: "Supplier Report", href: "/reports/suppliers" },
-      { label: "Top Selling Products", href: "/reports/top-selling" },
+      { label: "Top Products", href: "/reports/top-selling" },
       { label: "Best Customers", href: "/reports/best-customers" },
     ],
   },
   {
-    id: "transfer",
-    label: "Transfer",
-    icon: ArrowLeftRight,
-    roles: ['admin', 'user'],
+    id: "settings",
+    label: "System Settings",
+    icon: Settings,
+    roles: ['admin'],
+    category: "admin",
     submenu: [
-      { label: "Create Transfer", href: "/transfer/create" },
-      { label: "Transfer List", href: "/transfer/list" },
+      { label: "Warehouses", href: "/settings/warehouses" },
+      { label: "Categories", href: "/settings/categories" },
+      { label: "Brands", href: "/settings/brands" },
+      { label: "Currency", href: "/settings/currencies" },
+      { label: "Units", href: "/settings/units" },
+      { label: "Backup", href: "/settings/backup" },
+      { label: "System Config", href: "/settings/systems" },
     ],
   },
 ]
@@ -240,6 +247,104 @@ interface SubMenuItem {
 
 interface DashboardLayoutProps {
   children: React.ReactNode
+}
+
+// Simple Menu Item Component
+const MenuItemComponent = ({
+  item,
+  isExpanded,
+  onToggle,
+  sidebarOpen,
+  isActive,
+  filterSubmenu
+}: {
+  item: any
+  isExpanded: boolean
+  onToggle: () => void
+  sidebarOpen: boolean
+  isActive: (href?: string) => boolean
+  filterSubmenu: (submenu: any[]) => any[]
+}) => {
+  const submenuActive = item.submenu?.some((sub: any) => isActive(sub.href))
+  const active = isActive(item.href) || submenuActive
+
+  return (
+    <div className="relative">
+      {/* Main Item */}
+      <div
+        className={`group relative flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-2'} py-2 rounded-md cursor-pointer transition-colors ${
+          active
+            ? "bg-blue-50 text-[#1a237e] border-l-4 border-[#1a237e]"
+            : "text-gray-700 hover:bg-gray-50"
+        }`}
+        onClick={() => item.submenu && onToggle()}
+      >
+        <div className="flex-shrink-0">
+          <item.icon className={`h-5 w-5 ${active ? 'text-[#1a237e]' : 'text-gray-500'}`} />
+        </div>
+
+        {sidebarOpen && (
+          <>
+            {item.href ? (
+              <Link
+                href={item.href}
+                className="flex-1 font-medium text-sm truncate"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <span className="flex-1 font-medium text-sm truncate">{item.label}</span>
+            )}
+
+            {item.badge && (
+              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-[#1a237e] rounded">
+                {item.badge}
+              </span>
+            )}
+
+            {item.submenu && (
+              <ChevronRight
+                className={`h-4 w-4 transition-transform flex-shrink-0 ${
+                  isExpanded ? 'rotate-90' : ''
+                } ${active ? 'text-[#1a237e]' : 'text-gray-400'}`}
+              />
+            )}
+          </>
+        )}
+
+        {/* Tooltip for collapsed sidebar */}
+        {!sidebarOpen && (
+          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+            {item.label}
+          </div>
+        )}
+      </div>
+
+      {/* Submenu */}
+      {item.submenu && isExpanded && sidebarOpen && (
+        <div className="mt-1 ml-6 space-y-1">
+          {filterSubmenu(item.submenu).map((subItem: any, index: number) => {
+            const subActive = isActive(subItem.href)
+            return (
+              <Link
+                key={index}
+                href={subItem.href || "#"}
+                className={`flex items-center gap-3 px-3 py-1.5 rounded text-sm transition-colors ${
+                  subActive
+                    ? "bg-blue-50 text-[#1a237e] font-medium"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <div className="w-1 h-1 rounded-full bg-current opacity-60"></div>
+                <span className="truncate">{subItem.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 
@@ -291,9 +396,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item => {
+    // Filter by role
     if (!item.roles) return true
-    return item.roles.includes(userRole as UserRole)
+    const hasRoleAccess = item.roles.includes(userRole as UserRole)
+    return hasRoleAccess
   })
+
+  // Group menu items by category for better organization
+  const groupedMenuItems = filteredMenuItems.reduce((acc, item) => {
+    const category = item.category || 'other'
+    if (!acc[category]) acc[category] = []
+    acc[category].push(item)
+    return acc
+  }, {} as Record<string, typeof menuItems>)
+
+  const categoryOrder = ['main', 'transactions', 'inventory', 'documents', 'financial', 'management', 'analytics', 'admin']
+  const categoryLabels = {
+    main: 'Main',
+    transactions: 'Transactions',
+    inventory: 'Inventory',
+    documents: 'Documents',
+    financial: 'Financial',
+    management: 'Management',
+    analytics: 'Analytics',
+    admin: 'Administration'
+  }
 
   // Filter submenu items based on role
 const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
@@ -306,127 +433,67 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
   return (
     <AuthGuard>
       <div className="flex h-screen bg-gray-50">
-        {/* Sidebar */}
-        <div className={`${sidebarOpen ? "w-64" : "w-16"} bg-white border-r transition-all duration-300 flex flex-col h-full`}>
+        {/* Simple Clean Sidebar */}
+        <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-full overflow-hidden`}>
+
           {/* Sidebar Header */}
-          <div
-            className=" p-4  flex items-center gap-3"
-            style={{
-              fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
-              fontSize: "14px",
-              background: "#fff",
-              boxShadow: "none"
-            }}
-          >
-            <Link href="/dashboard">
-              <div className="w-10 h-10  rounded-lg flex items-center justify-center cursor-pointer">
-                <img src={systemSettings?.system_logo || "/PosyLogo.png"} alt="POSy Logo" width={64} height={64} className="w-full h-full object-contain" />
+          <div className="p-4 border-b border-gray-200">
+            <Link href="/dashboard" className="flex items-center gap-3 w-full">
+              <div className={`${sidebarOpen ? "w-10 h-10" : "w-8 h-8"} bg-[#1a237e] rounded-lg flex items-center justify-center transition-all duration-300`}>
+                <img
+                  src={systemSettings?.system_logo || "/PosyLogo.png"}
+                  alt="POSy Logo"
+                  className="w-6 h-6 object-contain filter brightness-0 invert"
+                />
               </div>
+              {sidebarOpen && (
+                <div className="flex flex-col">
+                  <span className="font-semibold text-lg text-gray-900">
+                    {systemSettings?.system_title || "POSy"}
+                  </span>
+                  <span className="text-gray-500 text-sm">Business Suite</span>
+                </div>
+              )}
             </Link>
-            {sidebarOpen && (
-              <span className="font-semibold text-xl text-[#1a237e]" style={{ letterSpacing: "0.02em" }}>
-                {systemSettings?.system_title || "POSy"}
-              </span>
-            )}
           </div>
 
+
           {/* Navigation */}
-          <nav className="flex-1 py-4 overflow-y-auto">
-            {filteredMenuItems.map((item) => {
-              const submenuActive = item.submenu?.some(sub => isActive(sub.href))
-              const active = isActive(item.href) || submenuActive
-              const isExpanded = expandedItems[item.id]
+          <nav className="flex-1 overflow-y-auto">
+            <div className={`${sidebarOpen ? 'px-4' : 'px-2'} py-2`}>
+              {/* Categorized Navigation */}
+              <div className="space-y-6">
+                {categoryOrder.map(category => {
+                  const items = groupedMenuItems[category]
+                  if (!items || items.length === 0) return null
 
-              return (
-                <div key={item.id} className="relative">
-                  <div
-                    className={`flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 cursor-pointer
-                      ${active ? "bg-purple-50 border-r-2 border-purple-600 font-semibold text-purple-900" : ""}`}
-                    onClick={() => item.submenu && toggleItem(item.id)}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {sidebarOpen && (
-                      <>
-                        {item.href ? (
-                          <Link href={item.href} className="flex-1" onClick={(e) => e.stopPropagation()}>
-                            {item.label}
-                          </Link>
-                        ) : (
-                          <span className="flex-1">{item.label}</span>
-                        )}
-                        {item.submenu && (
-                          isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Submenu - shown below parent when expanded */}
-                  {item.submenu && isExpanded && sidebarOpen && (
-                    <div className="bg-gray-50">
-                      {filterSubmenu(item.submenu).map((subItem, index) => {
-                        const subActive = isActive(subItem.href)
-                        const hasSubSubmenu = subItem.submenu
-                        const isSubExpanded = expandedItems[`${item.id}-${subItem.label}`]
-
-                        return (
-                          <div key={index}>
-                            <div
-                              className={`flex items-center gap-3 px-8 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer
-                                ${subActive ? "bg-purple-100 text-purple-900 font-semibold" : ""}`}
-                              onClick={(e) => {
-                                if (hasSubSubmenu) {
-                                  e.stopPropagation()
-                                  setExpandedItems(prev => ({
-                                    ...prev,
-                                    [`${item.id}-${subItem.label}`]: !prev[`${item.id}-${subItem.label}`]
-                                  }))
-                                }
-                              }}
-                            >
-                              {subItem.href ? (
-                                <Link 
-                                  href={subItem.href} 
-                                  className="flex-1" 
-                                  onClick={(e) => !hasSubSubmenu && e.stopPropagation()}
-                                >
-                                  {subItem.label}
-                                </Link>
-                              ) : (
-                                <span className="flex-1">{subItem.label}</span>
-                              )}
-                              {hasSubSubmenu && (
-                                isSubExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
-                              )}
-                            </div>
-
-                            {/* Third level submenu */}
-                            {hasSubSubmenu && isSubExpanded && (
-                              <div className="bg-gray-100">
-                                {filterSubmenu(subItem.submenu || []).map((subSubItem, subIndex) => {
-                                  const subSubActive = isActive(subSubItem.href)
-                                  return (
-                                    <Link href={subSubItem.href || '#'} key={subIndex}>
-                                      <div
-                                        className={`flex items-center gap-3 px-12 py-1 text-xs text-gray-700 hover:bg-gray-200 cursor-pointer
-                                          ${subSubActive ? "bg-purple-100 text-purple-900 font-semibold" : ""}`}
-                                      >
-                                        {subSubItem.label}
-                                      </div>
-                                    </Link>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
+                  return (
+                    <div key={category} className={`${sidebarOpen ? 'space-y-1' : 'space-y-2'}`}>
+                      {sidebarOpen && (
+                        <div className="px-1 mb-3">
+                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            {categoryLabels[category] || category}
+                          </h3>
+                        </div>
+                      )}
+                      {items.map((item) => (
+                        <MenuItemComponent
+                          key={item.id}
+                          item={item}
+                          isExpanded={expandedItems[item.id]}
+                          onToggle={() => toggleItem(item.id)}
+                          sidebarOpen={sidebarOpen}
+                          isActive={isActive}
+                          filterSubmenu={filterSubmenu}
+                        />
+                      ))}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+                  )
+                })}
+              </div>
+            </div>
           </nav>
+
         </div>
 
         {/* Main Content */}
@@ -458,13 +525,8 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
               )}
             </button>
 
-           
-              <Button variant="ghost" size="sm" className="relative rounded bg-transparent hover:bg-blue-50 text-blue-900" style={{ fontSize: "13px" }}>
-                <Bell className="h-10 w-10"  />
-                <span className="absolute -top-1 -right-1 bg-[#1a237e] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  1
-                </span>
-              </Button>
+
+              <NotificationsDropdown />
               
               {/* Profile Dropdown */}
               <div className="relative">

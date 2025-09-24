@@ -1,0 +1,87 @@
+{{#ifEmpty data}}
+<div class="empty-state">
+    <div class="empty-state-icon">📊</div>
+    <div class="empty-state-title">No Sales Data Found</div>
+    <div class="empty-state-description">No sales records match the selected criteria.</div>
+</div>
+{{else}}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Customer</th>
+                <th>Warehouse</th>
+                <th>Status</th>
+                <th>Payment Status</th>
+                <th class="text-right">Subtotal</th>
+                <th class="text-right">Tax</th>
+                <th class="text-right">Discount</th>
+                <th class="text-right">Total</th>
+                <th class="text-right">Paid</th>
+                <th class="text-right">Due</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each data}}
+            <tr>
+                <td>{{formatDate date}}</td>
+                <td class="font-medium">{{reference}}</td>
+                <td>{{#if customer.name}}{{customer.name}}{{else if customer_name}}{{customer_name}}{{else}}Walk-in Customer{{/if}}</td>
+                <td>{{#if warehouse.name}}{{warehouse.name}}{{else if warehouse_name}}{{warehouse_name}}{{else}}-{{/if}}</td>
+                <td class="text-center">{{{statusBadge status}}}</td>
+                <td class="text-center">{{{statusBadge payment_status}}}</td>
+                <td class="text-right">{{formatCurrency subtotal}}</td>
+                <td class="text-right">{{formatCurrency tax_amount}}</td>
+                <td class="text-right">{{formatCurrency discount}}</td>
+                <td class="text-right font-bold">{{formatCurrency total}}</td>
+                <td class="text-right">{{formatCurrency paid}}</td>
+                <td class="text-right">{{formatCurrency due}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f3f4f6; font-weight: bold;">
+                <td colspan="6" class="text-right">Totals:</td>
+                <td class="text-right">{{formatCurrency totals.subtotal}}</td>
+                <td class="text-right">{{formatCurrency totals.tax_amount}}</td>
+                <td class="text-right">{{formatCurrency totals.discount}}</td>
+                <td class="text-right">{{formatCurrency totals.total}}</td>
+                <td class="text-right">{{formatCurrency totals.paid}}</td>
+                <td class="text-right">{{formatCurrency totals.due}}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+{{#if showSummaryByStatus}}
+<div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 15px; font-size: 14px; color: #1f2937;">Sales by Status</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        {{#each statusSummary}}
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">{{status}}</div>
+            <div style="font-size: 14px; font-weight: bold; color: #1e293b;">{{count}} Sales</div>
+            <div style="font-size: 12px; color: #059669; font-weight: 600;">{{formatCurrency amount}}</div>
+        </div>
+        {{/each}}
+    </div>
+</div>
+{{/if}}
+
+{{#if showSummaryByPaymentStatus}}
+<div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 15px; font-size: 14px; color: #1f2937;">Sales by Payment Status</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        {{#each paymentStatusSummary}}
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">{{payment_status}}</div>
+            <div style="font-size: 14px; font-weight: bold; color: #1e293b;">{{count}} Sales</div>
+            <div style="font-size: 12px; color: #059669; font-weight: 600;">{{formatCurrency amount}}</div>
+        </div>
+        {{/each}}
+    </div>
+</div>
+{{/if}}
+{{/ifEmpty}}

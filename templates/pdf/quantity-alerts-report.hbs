@@ -1,0 +1,89 @@
+{{#ifEmpty data}}
+<div class="empty-state">
+    <div class="empty-state-icon">⚠️</div>
+    <div class="empty-state-title">No Low Stock Items</div>
+    <div class="empty-state-description">All products are above their alert quantity levels.</div>
+</div>
+{{else}}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Product Code</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Brand</th>
+                <th>Warehouse</th>
+                <th class="text-right">Current Stock</th>
+                <th class="text-right">Alert Quantity</th>
+                <th class="text-right">Difference</th>
+                <th class="text-right">Unit Price</th>
+                <th>Priority</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each data}}
+            <tr>
+                <td class="font-medium">{{code}}</td>
+                <td>{{name}}</td>
+                <td>{{#if category_name}}{{category_name}}{{else}}-{{/if}}</td>
+                <td>{{#if brand_name}}{{brand_name}}{{else}}-{{/if}}</td>
+                <td>{{#if warehouse_name}}{{warehouse_name}}{{else}}-{{/if}}</td>
+                <td class="text-right">{{stock}}</td>
+                <td class="text-right">{{alert_quantity}}</td>
+                <td class="text-right" style="color: #dc2626; font-weight: 600;">{{add stock (multiply alert_quantity -1)}}</td>
+                <td class="text-right">{{formatCurrency price}}</td>
+                <td class="text-center">
+                    {{#if (gt (multiply alert_quantity 0.5) stock)}}
+                        <span style="background: #dc2626; color: white; padding: 3px 6px; border-radius: 3px; font-size: 10px;">CRITICAL</span>
+                    {{else if (gt (multiply alert_quantity 0.8) stock)}}
+                        <span style="background: #f59e0b; color: white; padding: 3px 6px; border-radius: 3px; font-size: 10px;">HIGH</span>
+                    {{else}}
+                        <span style="background: #10b981; color: white; padding: 3px 6px; border-radius: 3px; font-size: 10px;">MEDIUM</span>
+                    {{/if}}
+                </td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 15px; font-size: 14px; color: #1f2937;">Stock Alert Summary</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="padding: 12px; background: #fef2f2; border-radius: 6px; border: 1px solid #fecaca;">
+            <div style="font-size: 11px; color: #991b1b; text-transform: uppercase; margin-bottom: 4px;">Critical Items</div>
+            <div style="font-size: 18px; font-weight: bold; color: #dc2626;">{{summary.critical}}</div>
+            <div style="font-size: 10px; color: #7f1d1d;">≤ 50% of alert qty</div>
+        </div>
+        <div style="padding: 12px; background: #fffbeb; border-radius: 6px; border: 1px solid #fde68a;">
+            <div style="font-size: 11px; color: #92400e; text-transform: uppercase; margin-bottom: 4px;">High Priority</div>
+            <div style="font-size: 18px; font-weight: bold; color: #f59e0b;">{{summary.high}}</div>
+            <div style="font-size: 10px; color: #78350f;">≤ 80% of alert qty</div>
+        </div>
+        <div style="padding: 12px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
+            <div style="font-size: 11px; color: #166534; text-transform: uppercase; margin-bottom: 4px;">Medium Priority</div>
+            <div style="font-size: 18px; font-weight: bold; color: #10b981;">{{summary.medium}}</div>
+            <div style="font-size: 10px; color: #14532d;">> 80% of alert qty</div>
+        </div>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Total Items</div>
+            <div style="font-size: 18px; font-weight: bold; color: #1e293b;">{{data.length}}</div>
+            <div style="font-size: 10px; color: #475569;">Low stock items</div>
+        </div>
+    </div>
+</div>
+
+{{#if recommendations}}
+<div style="margin-top: 30px; padding: 15px; background: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+    <h3 style="margin-bottom: 10px; font-size: 14px; color: #1e293b;">💡 Recommendations</h3>
+    <ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #374151; line-height: 1.5;">
+        <li>Prioritize restocking critical items to avoid stockouts</li>
+        <li>Review alert quantities for frequently low-stock items</li>
+        <li>Consider bulk ordering for high-value products</li>
+        <li>Set up automated purchase orders for critical items</li>
+        <li>Monitor seasonal demand patterns for better forecasting</li>
+    </ul>
+</div>
+{{/if}}
+{{/ifEmpty}}

@@ -89,7 +89,7 @@ export async function GET(req: NextRequest): Promise<NextResponse<Purchase | Pag
       }
     }
 
-    const [purchases, total] = await Promise.all([
+    const [purchases, total] =await Promise.all([
       prisma.purchases.findMany({
         where,
         skip: offset,

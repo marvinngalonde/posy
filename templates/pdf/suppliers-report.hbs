@@ -1,0 +1,67 @@
+{{#ifEmpty data}}
+<div class="empty-state">
+    <div class="empty-state-icon">🏢</div>
+    <div class="empty-state-title">No Supplier Data Found</div>
+    <div class="empty-state-description">No supplier records match the selected criteria.</div>
+</div>
+{{else}}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Supplier Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>City</th>
+                <th>Country</th>
+                <th class="text-right">Total Orders</th>
+                <th class="text-right">Total Amount</th>
+                <th>Status</th>
+                <th>Added Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each data}}
+            <tr>
+                <td class="font-medium">{{name}}</td>
+                <td>{{#if email}}{{email}}{{else}}-{{/if}}</td>
+                <td>{{#if phone}}{{phone}}{{else}}-{{/if}}</td>
+                <td>{{#if address}}{{address}}{{else}}-{{/if}}</td>
+                <td>{{#if city}}{{city}}{{else}}-{{/if}}</td>
+                <td>{{#if country}}{{country}}{{else}}-{{/if}}</td>
+                <td class="text-right">{{#if total_orders}}{{total_orders}}{{else}}0{{/if}}</td>
+                <td class="text-right">{{formatCurrency total_amount}}</td>
+                <td class="text-center">{{{statusBadge status}}}</td>
+                <td>{{formatDate created_at}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
+
+{{#if showSupplierAnalytics}}
+<div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 15px; font-size: 14px; color: #1f2937;">Supplier Analytics</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Total Suppliers</div>
+            <div style="font-size: 18px; font-weight: bold; color: #1e293b;">{{analytics.totalSuppliers}}</div>
+        </div>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Active Suppliers</div>
+            <div style="font-size: 18px; font-weight: bold; color: #059669;">{{analytics.activeSuppliers}}</div>
+        </div>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Average Order Value</div>
+            <div style="font-size: 18px; font-weight: bold; color: #059669;">{{formatCurrency analytics.averageOrderValue}}</div>
+        </div>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Top Supplier</div>
+            <div style="font-size: 14px; font-weight: bold; color: #1e293b;">{{analytics.topSupplier.name}}</div>
+            <div style="font-size: 12px; color: #059669;">{{formatCurrency analytics.topSupplier.total_amount}}</div>
+        </div>
+    </div>
+</div>
+{{/if}}
+{{/ifEmpty}}

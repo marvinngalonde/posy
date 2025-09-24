@@ -28,6 +28,8 @@ import { invoicesApi } from "./slices/invoicesApi"
 import { organizationApi } from "./slices/organizationApi"
 import { settingsV2Api } from "./slices/settingsV2Api"
 import { authApi } from "./slices/authSlice"
+import { dashboardApi } from "./slices/dashboardApi"
+import { notificationsApi } from "./slices/notificationsApi"
 
 export const store = configureStore({
   reducer: {
@@ -60,6 +62,8 @@ export const store = configureStore({
     [organizationApi.reducerPath]: organizationApi.reducer,
     [settingsV2Api.reducerPath]: settingsV2Api.reducer,
     [authApi.reducerPath]: authApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
+    [notificationsApi.reducerPath]: notificationsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -82,7 +86,9 @@ export const store = configureStore({
       invoicesApi.middleware,
       organizationApi.middleware,
       settingsV2Api.middleware,
-      authApi.middleware
+      authApi.middleware,
+      dashboardApi.middleware,
+      notificationsApi.middleware
     ),
 })
 

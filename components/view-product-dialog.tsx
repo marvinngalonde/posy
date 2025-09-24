@@ -91,7 +91,7 @@ export function ViewProductDialog({
             </div>
           )}
           </div>
-        </div>
+       
 
         <div className="flex justify-end pt-4 border-t bg-white">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

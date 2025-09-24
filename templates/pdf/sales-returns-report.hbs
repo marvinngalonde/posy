@@ -1,0 +1,71 @@
+{{#ifEmpty data}}
+<div class="empty-state">
+    <div class="empty-state-icon">↩️</div>
+    <div class="empty-state-title">No Sales Returns Found</div>
+    <div class="empty-state-description">No sales return records match the selected criteria.</div>
+</div>
+{{else}}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Customer</th>
+                <th>Warehouse</th>
+                <th>Sale Reference</th>
+                <th>Status</th>
+                <th class="text-right">Subtotal</th>
+                <th class="text-right">Tax</th>
+                <th class="text-right">Discount</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each data}}
+            <tr>
+                <td>{{formatDate date}}</td>
+                <td class="font-medium">{{reference}}</td>
+                <td>{{#if customer_name}}{{customer_name}}{{else}}-{{/if}}</td>
+                <td>{{#if warehouse_name}}{{warehouse_name}}{{else}}-{{/if}}</td>
+                <td>{{#if sale_reference}}{{sale_reference}}{{else}}-{{/if}}</td>
+                <td class="text-center">{{{statusBadge status}}}</td>
+                <td class="text-right">{{formatCurrency subtotal}}</td>
+                <td class="text-right">{{formatCurrency tax_amount}}</td>
+                <td class="text-right">{{formatCurrency discount}}</td>
+                <td class="text-right font-bold">{{formatCurrency total}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f3f4f6; font-weight: bold;">
+                <td colspan="6" class="text-right">Totals:</td>
+                <td class="text-right">{{formatCurrency totals.subtotal}}</td>
+                <td class="text-right">{{formatCurrency totals.tax_amount}}</td>
+                <td class="text-right">{{formatCurrency totals.discount}}</td>
+                <td class="text-right">{{formatCurrency totals.total}}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+{{#if showReturnAnalytics}}
+<div style="margin-top: 30px;">
+    <h3 style="margin-bottom: 15px; font-size: 14px; color: #1f2937;">Return Analytics</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Total Returns</div>
+            <div style="font-size: 18px; font-weight: bold; color: #1e293b;">{{analytics.totalReturns}}</div>
+        </div>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Return Value</div>
+            <div style="font-size: 18px; font-weight: bold; color: #dc2626;">{{formatCurrency analytics.returnValue}}</div>
+        </div>
+        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Avg Return</div>
+            <div style="font-size: 18px; font-weight: bold; color: #059669;">{{formatCurrency analytics.avgReturn}}</div>
+        </div>
+    </div>
+</div>
+{{/if}}
+{{/ifEmpty}}

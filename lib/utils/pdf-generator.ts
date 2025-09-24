@@ -32,10 +32,50 @@ Handlebars.registerHelper('toLowerCase', function(str: string) {
   return str ? str.toLowerCase() : ''
 })
 
+Handlebars.registerHelper('statusBadge', function(status: string) {
+  const statusColors: Record<string, string> = {
+    'completed': 'background: #10b981; color: white;',
+    'pending': 'background: #f59e0b; color: white;',
+    'cancelled': 'background: #ef4444; color: white;',
+    'received': 'background: #10b981; color: white;',
+    'paid': 'background: #10b981; color: white;',
+    'unpaid': 'background: #ef4444; color: white;',
+    'partial': 'background: #f59e0b; color: white;'
+  }
+
+  const style = statusColors[status?.toLowerCase()] || 'background: #6b7280; color: white;'
+  return new Handlebars.SafeString(
+    `<span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; ${style}">${status}</span>`
+  )
+})
+
+Handlebars.registerHelper('add', function(a: number, b: number) {
+  return Number(a || 0) + Number(b || 0)
+})
+
+Handlebars.registerHelper('multiply', function(a: number, b: number) {
+  return Number(a || 0) * Number(b || 0)
+})
+
+Handlebars.registerHelper('eq', function(a: any, b: any) {
+  return a === b
+})
+
+Handlebars.registerHelper('gt', function(a: number, b: number) {
+  return Number(a || 0) > Number(b || 0)
+})
+
+Handlebars.registerHelper('ifEmpty', function(value: any, options: any) {
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return options.fn(this)
+  }
+  return options.inverse(this)
+})
+
 /**
  * Template types supported by the PDF generator
  */
-export type PDFTemplateType = 'invoice' | 'quotation' | 'receipt'
+export type PDFTemplateType = 'invoice' | 'quotation' | 'receipt' | 'sales-report'
 
 /**
  * Base interface for all PDF document data
@@ -323,6 +363,10 @@ export class PDFGenerator {
         return this.generateQuotationPDF(data as QuotationPDFData, options)
       case 'receipt':
         return this.generateReceiptPDF(data as ReceiptPDFData, options)
+      case 'sales-report':
+        // For sales report, we can use the general HTML generation
+        const html = await this.generateHTML(templateType, data)
+        return await this.generatePDFFromHTML(html, options)
       default:
         throw new Error(`Unsupported template type: ${templateType}`)
     }

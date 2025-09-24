@@ -37,30 +37,62 @@ export default function ProductQuantityAlerts() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF()
-    doc.text('Product Quantity Alerts Report', 14, 16)
-    
-    const tableData = products.map(product => [
-      product.code,
-      product.name,
-      product.warehouse_name || "-",
-      product.stock.toString(),
-      product.alert_quantity.toString(),
-      product.category_name || "-",
-      product.brand_name || "-",
-      `$${Number(product.price || 0) }`
-    ])
-    
-    autoTable(doc, {
-      head: [['Code', 'Product', 'Warehouse', 'Quantity', 'Alert Quantity', 'Category', 'Brand', 'Price']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [26, 35, 126] }
-    })
-    
-    doc.save('product-quantity-alerts.pdf')
+  const handleExportPDF = async () => {
+    try {
+      // Calculate summary data
+      const summary = {
+        critical: products.filter(item => item.stock <= (item.alert_quantity * 0.5)).length,
+        high: products.filter(item =>
+          item.stock > (item.alert_quantity * 0.5) && item.stock <= (item.alert_quantity * 0.8)
+        ).length,
+        medium: products.filter(item => item.stock > (item.alert_quantity * 0.8)).length
+      }
+
+      const reportData = {
+        title: 'Product Quantity Alerts Report',
+        template: 'quantity-alerts-report',
+        data: products,
+        filters: [
+          { label: 'Search', value: searchTerm || 'All Products' },
+          { label: 'Warehouse', value: selectedWarehouse === 'all' ? 'All Warehouses' : selectedWarehouse }
+        ].filter(f => f.value !== 'All Products'),
+        summary: [
+          { label: 'Total Low Stock Items', value: products.length },
+          { label: 'Critical Items', value: summary.critical },
+          { label: 'High Priority Items', value: summary.high },
+          { label: 'Medium Priority Items', value: summary.medium }
+        ],
+        recommendations: true
+      }
+
+      const response = await fetch('/api/reports/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reportData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `quantity-alerts-report-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast.success('PDF generated successfully')
+    } catch (error) {
+      console.error('PDF generation error:', error)
+      toast.error('Failed to generate PDF')
+    }
   }
 
   const handleExportExcel = () => {

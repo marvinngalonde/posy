@@ -1,42 +1,42 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import DashboardLayout from "../../../components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DateRangePicker } from "../../../components/date-range-picker"
-import { Search, Eye, Edit, Trash2 } from "lucide-react"
+import { Search, Eye, Edit, Trash2, FileDown, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-
-interface Sale {
-  id: string
-  reference: string
-  customer_name: string
-  warehouse_name: string
-  date: string
-  subtotal: number
-  tax_amount: number
-  discount: number
-  shipping: number
-  total: number
-  paid: number
-  due: number
-  status: string
-  payment_status: string
-  notes: string
-  created_at: string
-}
+import { useGetSalesQuery, useUpdateSaleMutation, useDeleteSaleMutation } from "@/lib/slices/salesApi"
+import { calculateFinancialTotals, groupByStatus } from "@/lib/report-utils"
+import type { DateRange } from "react-day-picker"
 
 export default function SaleReport() {
-  const [sales, setSales] = useState<Sale[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [dateRange, setDateRange] = useState("1970-01-01 - 2025-07-01")
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(50)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date()
+  })
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
+  const [selectedSale, setSelectedSale] = useState<any>(null)
+  // RTK Query hooks
+  const { data: salesData, isLoading, error, refetch } = useGetSalesQuery({
+    page,
+    limit,
+    search: searchTerm,
+    date_from: dateRange?.from?.toISOString().split('T')[0],
+    date_to: dateRange?.to?.toISOString().split('T')[0]
+  })
+  const [updateSale] = useUpdateSaleMutation()
+  const [deleteSale] = useDeleteSaleMutation()
+
+  const sales = salesData?.data || []
+
   const [formData, setFormData] = useState({
     reference: "",
     customer_id: "",
@@ -55,53 +55,25 @@ export default function SaleReport() {
     notes: ""
   })
 
-  // Fetch sales
-  useEffect(() => {
-    const fetchSales = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/pos/sales')
-        if (!res.ok) throw new Error("Failed to fetch sales")
-        const data = await res.json()
-        setSales(data.data || [])
-      } catch (error) {
-        toast.error("Failed to load sales")
-        console.error(error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    fetchSales()
-  }, [])
-
-  // Filter sales based on search
-  const filteredSales = Array.isArray(sales) ? sales.filter(sale =>
-    sale.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sale.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sale.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : []
+  // Filter sales based on search (using RTK Query for server-side filtering)
+  const filteredSales = useMemo(() => {
+    return Array.isArray(sales) ? sales : []
+  }, [sales])
 
   // Handle edit sale
   const handleEdit = async () => {
     if (!selectedSale) return
-    
+
     try {
-      const res = await fetch('/api/pos/sales', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id: selectedSale.id })
-      })
-      
-      if (!res.ok) throw new Error("Failed to update sale")
-      
-      const updatedSale = await res.json()
-      setSales(prevSales => Array.isArray(prevSales) ? prevSales.map(s =>
-        s.id === selectedSale.id ? { ...s, ...updatedSale } : s
-      ) : [])
+      await updateSale({
+        id: selectedSale.id,
+        data: formData
+      }).unwrap()
+
       setShowEditModal(false)
       resetForm()
       toast.success("Sale updated successfully")
+      refetch()
     } catch (error) {
       toast.error("Failed to update sale")
       console.error(error)
@@ -111,17 +83,13 @@ export default function SaleReport() {
   // Handle delete sale
   const handleDelete = async () => {
     if (!selectedSale) return
-    
+
     try {
-      const res = await fetch(`/api/pos/sales?id=${selectedSale.id}`, {
-        method: 'DELETE'
-      })
-      
-      if (!res.ok) throw new Error("Failed to delete sale")
-      
-      setSales(prevSales => Array.isArray(prevSales) ? prevSales.filter(s => s.id !== selectedSale.id) : [])
+      await deleteSale(selectedSale.id).unwrap()
+
       setShowDeleteModal(false)
       toast.success("Sale deleted successfully")
+      refetch()
     } catch (error) {
       toast.error("Failed to delete sale")
       console.error(error)
@@ -184,6 +152,99 @@ export default function SaleReport() {
     })
   }
 
+  // Export to PDF
+  const handleExportPDF = async () => {
+    try {
+      const totals = calculateFinancialTotals(filteredSales)
+      const statusSummary = groupByStatus(filteredSales, 'status')
+      const paymentStatusSummary = groupByStatus(filteredSales, 'payment_status')
+
+      const dateRangeString = dateRange?.from && dateRange?.to
+        ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
+        : 'All Time'
+
+      const reportData = {
+        title: 'Sales Report',
+        template: 'sales-report',
+        data: filteredSales,
+        searchTerm,
+        dateRange: dateRangeString,
+        summary: [
+          { label: 'Total Sales', value: filteredSales.length },
+          { label: 'Total Revenue', value: totals.total, isCurrency: true },
+          { label: 'Total Paid', value: totals.paid, isCurrency: true },
+          { label: 'Total Due', value: totals.due, isCurrency: true }
+        ],
+        totals,
+        showSummaryByStatus: true,
+        showSummaryByPaymentStatus: true,
+        statusSummary,
+        paymentStatusSummary
+      }
+
+      // Call server-side PDF generation API
+      const pdfResponse = await fetch('/api/pdf/sales-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportData)
+      })
+
+      if (!pdfResponse.ok) {
+        throw new Error(`PDF generation failed: ${pdfResponse.statusText}`)
+      }
+
+      // Create download from response
+      const pdfBlob = await pdfResponse.blob()
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.style.display = 'none'
+      a.href = url
+      a.download = `sales-report-${new Date().toISOString().split('T')[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast.success('Sales report PDF generated successfully!')
+    } catch (error) {
+      console.error('Error generating sales report PDF:', error)
+      toast.error('Failed to generate sales report PDF.')
+    }
+  }
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    const headers = ['Date', 'Reference', 'Customer', 'Warehouse', 'Status', 'Grand Total', 'Paid', 'Due', 'Payment Status']
+    const csvData = filteredSales.map(sale => [
+      new Date(sale.date).toLocaleDateString(),
+      sale.reference,
+      sale.customers?.name || 'Walk-in Customer',
+      sale.warehouses?.name || '-',
+      sale.status,
+      Number(sale.total || 0).toFixed(2),
+      Number(sale.paid || 0).toFixed(2),
+      Number(sale.due || 0).toFixed(2),
+      sale.payment_status
+    ])
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `sales-report-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('Excel file downloaded successfully')
+  }
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -199,24 +260,24 @@ export default function SaleReport() {
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <DateRangePicker onDateChange={(range) => setDateRange(`${range?.from?.toISOString().split('T')[0]} - ${range?.to?.toISOString().split('T')[0]}`)} />
+              <DateRangePicker
+                onDateChange={setDateRange}
+                initialDateRange={dateRange}
+              />
               <div className="relative">
-                <Input 
-                  placeholder="Search this table..." 
-                  className="w-64" 
+                <Input
+                  placeholder="Search this table..."
+                  className="w-64"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="text-blue-600 bg-transparent">
-                🔍 Filter
-              </Button>
-              <Button variant="outline" className="text-green-600 bg-transparent">
+              <Button variant="outline" className="text-green-600 bg-transparent" onClick={handleExportPDF}>
                 📄 PDF
               </Button>
-              <Button variant="outline" className="text-red-600 bg-transparent">
+              <Button variant="outline" className="text-red-600 bg-transparent" onClick={handleExportExcel}>
                 📊 EXCEL
               </Button>
             </div>
@@ -239,9 +300,17 @@ export default function SaleReport() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {isLoading ? (
                   <tr>
-                    <td colSpan={10} className="text-center p-6">Loading...</td>
+                    <td colSpan={10} className="text-center p-6">
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={10} className="text-center p-6 text-red-500">
+                      Error loading sales data
+                    </td>
                   </tr>
                 ) : filteredSales.length === 0 ? (
                   <tr>
@@ -252,8 +321,8 @@ export default function SaleReport() {
                     <tr key={sale.id} className="border-b hover:bg-gray-50">
                       <td className="p-3">{new Date(sale.date).toLocaleDateString()}</td>
                       <td className="p-3">{sale.reference}</td>
-                      <td className="p-3">{sale.customer_name || "Walk-in Customer"}</td>
-                      <td className="p-3">{sale.warehouse_name || "-"}</td>
+                      <td className="p-3">{sale.customers?.name || "Walk-in Customer"}</td>
+                      <td className="p-3">{sale.warehouses?.name || "-"}</td>
                       <td className="p-3">
                         <span
                           className={`px-2 py-1 rounded text-xs ${
@@ -333,11 +402,11 @@ export default function SaleReport() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Customer</label>
-                  <p className="mt-1 text-sm">{selectedSale.customer_name || "Walk-in Customer"}</p>
+                  <p className="mt-1 text-sm">{selectedSale.customer?.name || "Walk-in Customer"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Warehouse</label>
-                  <p className="mt-1 text-sm">{selectedSale.warehouse_name || "-"}</p>
+                  <p className="mt-1 text-sm">{selectedSale.warehouse?.name || "-"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>

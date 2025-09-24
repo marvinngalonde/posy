@@ -183,11 +183,11 @@ export type UpdateProductInput = Prisma.productsUpdateInput
 // Sale types
 export type Sale = Prisma.salesGetPayload<{
   include: {
-    customer: { select: { name: true } }
-    warehouse: { select: { name: true } }
-    items: {
+    customers: { select: { name: true, email: true } }
+    warehouses: { select: { name: true } }
+    sale_items: {
       include: {
-        product: { select: { name: true, code: true } }
+        product: { select: { name: true, sku: true } }
       }
     }
   }
