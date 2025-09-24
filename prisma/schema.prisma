@@ -224,28 +224,32 @@ model invoice_items {
 }
 
 model invoices {
-  id             Int                     @id @default(autoincrement())
-  reference      String                  @unique @db.VarChar(100)
-  customer_id    Int
-  warehouse_id   Int
-  sale_id        Int?
-  quotation_id   Int?
-  date           DateTime                @db.Date
-  due_date       DateTime?               @db.Date
-  subtotal       Decimal?                @default(0.00) @db.Decimal(10, 2)
-  tax_rate       Decimal?                @default(0.00) @db.Decimal(5, 2)
-  tax_amount     Decimal?                @default(0.00) @db.Decimal(10, 2)
-  discount       Decimal?                @default(0.00) @db.Decimal(10, 2)
-  shipping       Decimal?                @default(0.00) @db.Decimal(10, 2)
-  total          Decimal                 @db.Decimal(10, 2)
-  paid           Decimal?                @default(0.00) @db.Decimal(10, 2)
-  due            Decimal?                @default(0.00) @db.Decimal(10, 2)
-  status         invoices_status         @default(draft)
-  payment_status invoices_payment_status @default(unpaid)
-  notes          String?                 @db.Text
-  created_by     Int
-  created_at     DateTime?               @default(now()) @db.Timestamp(0)
-  updated_at     DateTime?               @db.Timestamp(0)
+  id                      Int                     @id @default(autoincrement())
+  reference               String                  @unique @db.VarChar(100)
+  customer_id             Int
+  warehouse_id            Int
+  sale_id                 Int?
+  quotation_id            Int?
+  date                    DateTime                @db.Date
+  due_date                DateTime?               @db.Date
+  subtotal                Decimal?                @default(0.00) @db.Decimal(10, 2)
+  tax_rate                Decimal?                @default(0.00) @db.Decimal(5, 2)
+  tax_amount              Decimal?                @default(0.00) @db.Decimal(10, 2)
+  discount                Decimal?                @default(0.00) @db.Decimal(10, 2)
+  shipping                Decimal?                @default(0.00) @db.Decimal(10, 2)
+  total                   Decimal                 @db.Decimal(10, 2)
+  paid                    Decimal?                @default(0.00) @db.Decimal(10, 2)
+  due                     Decimal?                @default(0.00) @db.Decimal(10, 2)
+  status                  invoices_status         @default(draft)
+  payment_status          invoices_payment_status @default(unpaid)
+  notes                   String?                 @db.Text
+  created_by              Int
+  created_at              DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at              DateTime?               @db.Timestamp(0)
+  // FDMS Integration fields
+  is_fiscalized           Boolean                 @default(false)
+  fiscal_transaction_id   BigInt?
+  zimra_qr_code           String?                 @db.Text
   invoice_items  invoice_items[]
   users          users                   @relation(fields: [created_by], references: [id])
   customers      customers               @relation(fields: [customer_id], references: [id])
@@ -536,25 +540,29 @@ model sale_items {
 }
 
 model sales {
-  id             Int                  @id @default(autoincrement())
-  reference      String               @unique @db.VarChar(100)
-  customer_id    Int
-  warehouse_id   Int
-  date           DateTime             @db.Date
-  subtotal       Decimal?             @default(0.00) @db.Decimal(10, 2)
-  tax_rate       Decimal?             @default(0.00) @db.Decimal(5, 2)
-  tax_amount     Decimal?             @default(0.00) @db.Decimal(10, 2)
-  discount       Decimal?             @default(0.00) @db.Decimal(10, 2)
-  shipping       Decimal?             @default(0.00) @db.Decimal(10, 2)
-  total          Decimal              @db.Decimal(10, 2)
-  paid           Decimal?             @default(0.00) @db.Decimal(10, 2)
-  due            Decimal?             @default(0.00) @db.Decimal(10, 2)
-  status         sales_status         @default(pending)
-  payment_status sales_payment_status @default(unpaid)
-  notes          String?              @db.Text
-  created_by     Int
-  created_at     DateTime?            @default(now()) @db.Timestamp(0)
-  updated_at     DateTime?            @db.Timestamp(0)
+  id                      Int                  @id @default(autoincrement())
+  reference               String               @unique @db.VarChar(100)
+  customer_id             Int
+  warehouse_id            Int
+  date                    DateTime             @db.Date
+  subtotal                Decimal?             @default(0.00) @db.Decimal(10, 2)
+  tax_rate                Decimal?             @default(0.00) @db.Decimal(5, 2)
+  tax_amount              Decimal?             @default(0.00) @db.Decimal(10, 2)
+  discount                Decimal?             @default(0.00) @db.Decimal(10, 2)
+  shipping                Decimal?             @default(0.00) @db.Decimal(10, 2)
+  total                   Decimal              @db.Decimal(10, 2)
+  paid                    Decimal?             @default(0.00) @db.Decimal(10, 2)
+  due                     Decimal?             @default(0.00) @db.Decimal(10, 2)
+  status                  sales_status         @default(pending)
+  payment_status          sales_payment_status @default(unpaid)
+  notes                   String?              @db.Text
+  created_by              Int
+  created_at              DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at              DateTime?            @db.Timestamp(0)
+  // FDMS Integration fields
+  is_fiscalized           Boolean              @default(false)
+  fiscal_transaction_id   BigInt?
+  zimra_qr_code           String?              @db.Text
   invoices       invoices[]
   sale_items     sale_items[]
   users          users                @relation(fields: [created_by], references: [id])
@@ -916,4 +924,157 @@ enum invoices_payment_status {
   unpaid
   partial
   paid
+}
+
+// ZIMRA FDMS Models
+model zimra_config {
+  id                        Int      @id @default(autoincrement())
+  taxpayer_tin              String   @db.VarChar(10)
+  vat_registration_no       String?  @db.VarChar(9)
+  business_name             String   @db.VarChar(250)
+  business_type             String   @db.VarChar(50)
+  branch_name               String   @default("Main Branch") @db.VarChar(250)
+  branch_address            Json
+  device_certificate_path   String?  @db.Text
+  certificate_thumbprint    String?  @db.VarChar(64)
+  certificate_expiry        DateTime? @db.Date
+  test_environment          Boolean  @default(true)
+  api_endpoint              String?  @db.VarChar(255)
+  status                    zimra_config_status @default(pending)
+  is_fdms_enabled           Boolean  @default(false)
+  created_at                DateTime? @default(now()) @db.Timestamp(0)
+  updated_at                DateTime? @db.Timestamp(0)
+
+  fiscal_devices            fiscal_devices[]
+  fiscal_transactions       fiscal_transactions[]
+  offline_fiscal_queue      offline_fiscal_queue[]
+
+  @@unique([taxpayer_tin])
+  @@index([status])
+}
+
+model fiscal_devices {
+  id                        Int      @id @default(autoincrement())
+  zimra_config_id           Int
+  device_id                 String   @unique @db.VarChar(50)
+  device_serial_no          String   @db.VarChar(20)
+  branch_name               String   @db.VarChar(250)
+  branch_address            Json
+  operating_mode            fiscal_devices_mode @default(Online)
+  status                    fiscal_devices_status @default(Pending)
+  daily_receipt_counter     Int      @default(0)
+  global_receipt_counter    BigInt   @default(0)
+  fiscal_day_opened         DateTime? @db.Timestamp(0)
+  last_z_report             DateTime? @db.Timestamp(0)
+  created_at                DateTime? @default(now()) @db.Timestamp(0)
+
+  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id])
+  fiscal_transactions       fiscal_transactions[]
+  offline_fiscal_queue      offline_fiscal_queue[]
+
+  @@index([zimra_config_id])
+  @@index([status])
+}
+
+model fiscal_transactions {
+  id                        BigInt   @id @default(autoincrement())
+  zimra_config_id           Int
+  device_id                 String   @db.VarChar(50)
+  receipt_global_no         BigInt
+  receipt_type              fiscal_receipt_type @default(FiscalInvoice)
+  invoice_no                String   @db.VarChar(50)
+  receipt_currency          String   @default("USD") @db.VarChar(3)
+  receipt_total             Decimal  @db.Decimal(21, 2)
+  tax_amount                Decimal  @db.Decimal(21, 2)
+  receipt_date              DateTime @db.Timestamp(0)
+  buyer_tin                 String?  @db.VarChar(10)
+  buyer_name                String?  @db.VarChar(250)
+  receipt_items             Json
+  device_signature          String   @db.Text
+  fdms_signature            String?  @db.Text
+  qr_code_data              String?  @db.Text
+  zimra_status              fiscal_transaction_status @default(pending)
+  error_message             String?  @db.Text
+  retry_count               Int      @default(0)
+  created_at                DateTime? @default(now()) @db.Timestamp(0)
+  updated_at                DateTime? @db.Timestamp(0)
+
+  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id])
+  fiscal_device             fiscal_devices @relation(fields: [device_id], references: [device_id])
+
+  @@unique([device_id, receipt_global_no])
+  @@index([zimra_config_id, receipt_date])
+  @@index([zimra_status])
+  @@index([invoice_no])
+}
+
+model offline_fiscal_queue {
+  id                        BigInt   @id @default(autoincrement())
+  zimra_config_id           Int
+  device_id                 String   @db.VarChar(50)
+  transaction_data          Json
+  status                    offline_queue_status @default(pending)
+  queued_at                 DateTime @default(now()) @db.Timestamp(0)
+  processed_at              DateTime? @db.Timestamp(0)
+  error_message             String?  @db.Text
+  retry_count               Int      @default(0)
+
+  zimra_config              zimra_config @relation(fields: [zimra_config_id], references: [id])
+  fiscal_device             fiscal_devices @relation(fields: [device_id], references: [device_id])
+
+  @@index([zimra_config_id, status])
+  @@index([queued_at])
+}
+
+model zimra_tax_rates {
+  id                        Int      @id @default(autoincrement())
+  tax_id                    Int
+  tax_name                  String   @db.VarChar(50)
+  tax_percent               Decimal  @db.Decimal(5, 2)
+  business_type             String?  @db.VarChar(50)
+  effective_date            DateTime @db.Date
+  is_active                 Boolean  @default(true)
+  created_at                DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([tax_id, business_type, effective_date])
+  @@index([is_active, effective_date])
+}
+
+// ZIMRA Enums
+enum zimra_config_status {
+  pending
+  approved
+  active
+  suspended
+}
+
+enum fiscal_devices_mode {
+  Online
+  Offline
+}
+
+enum fiscal_devices_status {
+  Active
+  Blocked
+  Pending
+}
+
+enum fiscal_receipt_type {
+  FiscalInvoice
+  CreditNote
+  DebitNote
+}
+
+enum fiscal_transaction_status {
+  pending
+  submitted
+  confirmed
+  failed
+}
+
+enum offline_queue_status {
+  pending
+  processing
+  synchronized
+  failed
 }

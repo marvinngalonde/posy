@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState} from "react"
 import { Button } from "@/components/ui/button"
 import {
   BarChart3,
@@ -20,20 +20,16 @@ import {
   ChevronDown,
   Home,
   TrendingUp,
-  Warehouse,
+ 
   CreditCard,
   UserCheck,
   RefreshCw,
-  Building,
-  Calculator,
+ 
   Receipt,
   Truck,
-  Briefcase,
-  Database,
-  Shield,
-  LogOut,
-  HelpCircle,
-  Zap
+ 
+  Zap,
+  FileCheck
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
@@ -233,6 +229,19 @@ const menuItems = [
       { label: "Units", href: "/settings/units" },
       { label: "Backup", href: "/settings/backup" },
       { label: "System Config", href: "/settings/systems" },
+      { label: "ZIMRA FDMS", href: "/settings/fdms" },
+    ],
+  },
+  {
+    id: "fdms",
+    label: "Fiscal Compliance",
+    icon: FileCheck,
+    roles: ['admin'],
+    category: "compliance",
+    submenu: [
+      { label: "FDMS Settings", href: "/settings/fdms" },
+      { label: "Fiscal Transactions", href: "/fdms/transactions" },
+      { label: "FDMS Status", href: "/fdms/status" },
     ],
   },
 ]
@@ -410,7 +419,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return acc
   }, {} as Record<string, typeof menuItems>)
 
-  const categoryOrder = ['main', 'transactions', 'inventory', 'documents', 'financial', 'management', 'analytics', 'admin']
+  const categoryOrder = ['main', 'transactions', 'inventory', 'documents', 'financial', 'management', 'analytics', 'compliance', 'admin']
   const categoryLabels = {
     main: 'Main',
     transactions: 'Transactions',
@@ -419,6 +428,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     financial: 'Financial',
     management: 'Management',
     analytics: 'Analytics',
+    compliance: 'Fiscal Compliance',
     admin: 'Administration'
   }
 
@@ -437,9 +447,9 @@ const filterSubmenu = (submenu: SubMenuItem[] = []): SubMenuItem[] => {
         <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-full overflow-hidden`}>
 
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="pl-4 p-2 border-b border-gray-200">
             <Link href="/dashboard" className="flex items-center gap-3 w-full">
-              <div className={`${sidebarOpen ? "w-10 h-10" : "w-8 h-8"} bg-[#1a237e] rounded-lg flex items-center justify-center transition-all duration-300`}>
+              <div className={`${sidebarOpen ? "w-10 h-10" : "w-8 h-8"} bg-[#1a237e] rounded-2xl flex items-center justify-center transition-all duration-300`}>
                 <img
                   src={systemSettings?.system_logo || "/PosyLogo.png"}
                   alt="POSy Logo"

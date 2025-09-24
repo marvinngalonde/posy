@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Plus, Minus, X } from "lucide-react"
+import { Search, Plus, Minus, X, Shield, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -17,6 +17,7 @@ import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetWarehousesQuery } from "@/lib/slices/settingsApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
 import { useCreateInvoiceMutation } from "@/lib/slices/invoicesApi"
+import { useSubmitFiscalInvoiceMutation, useGetFDMSStatusQuery } from "@/lib/slices/fdmsApi"
 
 import { InvoiceItem } from "@/lib/types/prisma"
 
@@ -63,6 +64,8 @@ export default function CreateInvoice() {
   const { data: warehousesData, isLoading: warehousesLoading } = useGetWarehousesQuery()
   const { data: productsResponse, isLoading: productsLoading } = useGetProductsQuery({ page: 1, limit: 1000, search: searchQuery, category: "all", brand: "all" })
   const [createInvoice] = useCreateInvoiceMutation()
+  const [submitFiscalInvoice, { isLoading: isSubmittingFiscal }] = useSubmitFiscalInvoiceMutation()
+  const { data: fdmsStatus } = useGetFDMSStatusQuery()
 
   const customers = useMemo(() => customersResponse?.data || [], [customersResponse])
   const warehouses = useMemo(() => warehousesData || [], [warehousesData])
@@ -174,9 +177,10 @@ export default function CreateInvoice() {
     setIsSubmitting(true);
     try {
       const user_id = localStorage.getItem('UserId');
+      const invoiceReference = `INV-${Date.now().toString().slice(-6)}`;
 
       const payload = {
-        reference: `INV-${Date.now().toString().slice(-6)}`,
+        reference: invoiceReference,
         date,
         customer_id: customerId,
         warehouse_id: warehouseId,
@@ -202,8 +206,43 @@ export default function CreateInvoice() {
         })),
       };
 
-      await createInvoice(payload).unwrap();
-      toast.success("Invoice created successfully!");
+      const createdInvoice = await createInvoice(payload).unwrap();
+
+      // FDMS Integration - Submit fiscal invoice if FDMS is configured
+      if (fdmsStatus?.data?.configured && fdmsStatus?.data?.fdmsEnabled) {
+        try {
+          const selectedCustomer = customers.find(c => c.id.toString() === customerId);
+
+          const fiscalInvoiceData = {
+            invoiceNo: invoiceReference,
+            total: Number(grandTotal.toFixed(2)),
+            taxAmount: Number(taxAmount.toFixed(2)),
+            customer: selectedCustomer ? {
+              name: selectedCustomer.name,
+              tin: null,
+              vatNumber: null
+            } : null,
+            items: items.map(item => ({
+              name: item.name,
+              quantity: Number(item.quantity),
+              price: Number(item.unit_price),
+              taxRate: Number(orderTax),
+              discount: Number(item.discount || 0),
+              total: Number((Number(item.unit_price || 0) * Number(item.quantity || 0) - Number(item.discount || 0)).toFixed(2))
+            })),
+            invoiceId: createdInvoice.data?.id
+          };
+
+          await submitFiscalInvoice(fiscalInvoiceData).unwrap();
+          toast.success("Invoice created and submitted to ZIMRA successfully!");
+        } catch (fiscalError: any) {
+          console.error("Failed to submit fiscal invoice:", fiscalError);
+          toast.warning("Invoice created but fiscal submission failed. Please retry from the invoice list.");
+        }
+      } else {
+        toast.success("Invoice created successfully!");
+      }
+
       router.push("/invoice/list");
     } catch (error: any) {
       console.error("Failed to create invoice:", error);
@@ -232,7 +271,26 @@ export default function CreateInvoice() {
             <span>|</span>
             <span>Create Invoice</span>
           </div>
-          <h1 className="text-2xl font-bold">Create Invoice</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Create Invoice</h1>
+
+            {/* FDMS Status Indicator */}
+            {fdmsStatus?.data && (
+              <div className="flex items-center gap-2">
+                {fdmsStatus.data.configured && fdmsStatus.data.fdmsEnabled ? (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-lg">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span className="text-sm font-medium">FDMS Active</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-600 rounded-lg">
+                    <Shield className="h-4 w-4" />
+                    <span className="text-sm font-medium">Non-FDMS Mode</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
@@ -500,10 +558,18 @@ export default function CreateInvoice() {
               <Button
                 className="bg-[#1a237e] hover:bg-[#23308c] text-white"
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSubmittingFiscal}
                 type='button'
               >
-                {isSubmitting ? "Submitting..." : "Submit Invoice"}
+                {isSubmitting ? (
+                  fdmsStatus?.data?.configured && fdmsStatus?.data?.fdmsEnabled
+                    ? "Creating & Fiscalizing..."
+                    : "Creating Invoice..."
+                ) : (
+                  fdmsStatus?.data?.configured && fdmsStatus?.data?.fdmsEnabled
+                    ? "Create & Fiscalize"
+                    : "Create Invoice"
+                )}
               </Button>
             </div>
 

@@ -30,6 +30,7 @@ import { settingsV2Api } from "./slices/settingsV2Api"
 import { authApi } from "./slices/authSlice"
 import { dashboardApi } from "./slices/dashboardApi"
 import { notificationsApi } from "./slices/notificationsApi"
+import { fdmsApi } from "./slices/fdmsApi"
 
 export const store = configureStore({
   reducer: {
@@ -64,6 +65,7 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
     [dashboardApi.reducerPath]: dashboardApi.reducer,
     [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [fdmsApi.reducerPath]: fdmsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -88,7 +90,8 @@ export const store = configureStore({
       settingsV2Api.middleware,
       authApi.middleware,
       dashboardApi.middleware,
-      notificationsApi.middleware
+      notificationsApi.middleware,
+      fdmsApi.middleware
     ),
 })
 

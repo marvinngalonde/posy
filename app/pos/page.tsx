@@ -17,6 +17,7 @@ import { useGetCategoriesQuery, useGetBrandsQuery, useGetWarehousesQuery } from 
 import { useGetCustomersQuery } from "@/lib/slices/customersApi"
 import { useGetProductsQuery } from "@/lib/slices/productsApi"
 import { useCreateSaleMutation } from "@/lib/slices/salesApi" // Import useCreateSaleMutation
+import { useSubmitFiscalInvoiceMutation, useGetFDMSStatusQuery } from "@/lib/slices/fdmsApi"
 import { useGetOrganizationQuery } from "@/lib/slices/organizationApi"
 import { toast } from "sonner" // Import toast for notifications
 
@@ -109,6 +110,10 @@ export default function POSSystem() {
 
   // RTK Query Mutations
   const [createSale, { isLoading: isCreatingSale }] = useCreateSaleMutation()
+  const [submitFiscalInvoice, { isLoading: isSubmittingFiscal }] = useSubmitFiscalInvoiceMutation()
+
+  // FDMS Status
+  const { data: fdmsStatus } = useGetFDMSStatusQuery()
 
   const allCategories = useMemo(() => {
     return categoriesData ? [{ id: "all", name: "All Category", icon: "/placeholder.svg?height=60&width=60" }, ...categoriesData] : [];
@@ -223,8 +228,44 @@ export default function POSSystem() {
         },
       };
       
-      await createSale(saleData).unwrap();
+      const createdSale = await createSale(saleData).unwrap();
       toast.success("Sale created successfully!");
+
+      // FDMS Integration - Submit fiscal invoice
+      if (fdmsStatus?.data?.configured) {
+        try {
+          const fiscalInvoiceData = {
+            invoiceNo: saleData.reference,
+            total: saleData.total,
+            currency: 'USD', // Default currency
+            customer: selectedCustomer !== "walkin" ? {
+              name: customersData?.find(c => c.id === selectedCustomer)?.name
+            } : undefined,
+            items: cartItems.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              taxRate: 15.0, // Default tax rate for Zimbabwe
+              taxId: 1
+            })),
+            saleId: createdSale.data?.id
+          };
+
+          const fiscalResult = await submitFiscalInvoice(fiscalInvoiceData).unwrap();
+
+          if (fiscalResult.success) {
+            if (fdmsStatus.data.fdmsEnabled) {
+              toast.success("Fiscal invoice submitted to ZIMRA successfully!");
+            } else {
+              toast.info("Receipt generated (Non-FDMS mode)");
+            }
+          }
+        } catch (fiscalError: any) {
+          console.error("Failed to submit fiscal invoice:", fiscalError);
+          toast.warning("Sale completed but fiscal submission failed. Check FDMS status.");
+        }
+      }
+
       setShowReceiptModal(true);
       setCartItems([]); // Clear cart after successful sale
     } catch (err: any) {
@@ -746,9 +787,28 @@ export default function POSSystem() {
                   rows={3}
                 />
               </div>
-              <Button className="bg-[#1a237e] hover:bg-[#23308c] hover:bg-purple-700" onClick={handleSubmitPayment}>
-                Submit
+              <Button
+                className="bg-[#1a237e] hover:bg-[#23308c] hover:bg-purple-700"
+                onClick={handleSubmitPayment}
+                disabled={isCreatingSale || isSubmittingFiscal}
+              >
+                {isCreatingSale || isSubmittingFiscal ? (
+                  <>Processing...</>
+                ) : (
+                  <>Submit Payment</>
+                )}
               </Button>
+
+              {/* FDMS Status Indicator */}
+              {fdmsStatus?.data?.configured && (
+                <div className="text-xs text-gray-600 text-center mt-2">
+                  {fdmsStatus.data.fdmsEnabled ? (
+                    <span className="text-green-600">✓ ZIMRA FDMS Active</span>
+                  ) : (
+                    <span className="text-orange-600">⚠ Non-FDMS Mode</span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
